@@ -16,6 +16,19 @@ $db_user = getenv('DB_USER') ?: ($_ENV['DB_USER'] ?? 'root');
 $db_pass = getenv('DB_PASS') !== false ? getenv('DB_PASS') : ($_ENV['DB_PASS'] ?? '');
 $db_name = getenv('DB_NAME') ?: ($_ENV['DB_NAME'] ?? 'salam_water');
 $db_port = getenv('DB_PORT') ?: ($_ENV['DB_PORT'] ?? '3306');
+$db_ssl  = getenv('DB_SSL') ?: ($_ENV['DB_SSL'] ?? '');
+
+// Dukungan parsing otomatis jika menggunakan format DATABASE_URL (Railway / Aiven / Supabase)
+if ($db_url = (getenv('DATABASE_URL') ?: ($_ENV['DATABASE_URL'] ?? ''))) {
+    $parsed = parse_url($db_url);
+    if ($parsed) {
+        $db_host = $parsed['host'] ?? $db_host;
+        $db_port = $parsed['port'] ?? $db_port;
+        $db_user = $parsed['user'] ?? $db_user;
+        $db_pass = $parsed['pass'] ?? $db_pass;
+        $db_name = isset($parsed['path']) ? ltrim($parsed['path'], '/') : $db_name;
+    }
+}
 
 /**
  * Mendapatkan instance koneksi PDO MySQL
@@ -23,7 +36,7 @@ $db_port = getenv('DB_PORT') ?: ($_ENV['DB_PORT'] ?? '3306');
  */
 function get_db_connection()
 {
-    global $db_host, $db_user, $db_pass, $db_name, $db_port;
+    global $db_host, $db_user, $db_pass, $db_name, $db_port, $db_ssl;
     static $pdo = null;
 
     if ($pdo !== null) {
@@ -39,12 +52,23 @@ function get_db_connection()
         PDO::MYSQL_ATTR_INIT_COMMAND => "SET NAMES utf8mb4"
     ];
 
+    // Aktifkan mode SSL jika menggunakan cloud provider (TiDB, Aiven, dll)
+    if ($db_ssl === 'true' || $db_ssl === '1' || (int)$db_port === 4000) {
+        $options[PDO::MYSQL_ATTR_SSL_VERIFY_SERVER_CERT] = false;
+    }
+
     try {
         $pdo = new PDO($dsn, $db_user, $db_pass, $options);
         return $pdo;
     } catch (PDOException $e) {
-        // Jika koneksi gagal, kembalikan respons JSON yang informatif
-        json_response(false, null, 'Gagal terhubung ke database: ' . $e->getMessage(), 500);
+        $is_vercel = getenv('VERCEL') || isset($_ENV['VERCEL']);
+        $msg = 'Gagal terhubung ke database: ' . $e->getMessage();
+
+        if ($is_vercel && ($db_host === '127.0.0.1' || $db_host === 'localhost')) {
+            $msg = 'Database Cloud belum terhubung di Vercel. Harap atur DB_HOST, DB_USER, DB_PASS, DB_NAME di Vercel Environment Variables.';
+        }
+
+        json_response(false, null, $msg, 500);
         exit;
     }
 }
