@@ -1,0 +1,35 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <defs>
+    <linearGradient id="dropGrad" x1="20%" y1="0%" x2="80%" y2="100%">
+      <stop offset="0%" stop-color="#38bdf8"/>
+      <stop offset="50%" stop-color="#0284c7"/>
+      <stop offset="100%" stop-color="#0369a1"/>
+    </linearGradient>
+    <linearGradient id="shineGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#ffffff" stop-opacity="0.85"/>
+      <stop offset="100%" stop-color="#ffffff" stop-opacity="0.1"/>
+    </linearGradient>
+    <linearGradient id="rippleGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#38bdf8" stop-opacity="0.2"/>
+      <stop offset="50%" stop-color="#0ea5e9" stop-opacity="0.6"/>
+      <stop offset="100%" stop-color="#38bdf8" stop-opacity="0.2"/>
+    </linearGradient>
+    <filter id="shadow" x="-10%" y="-10%" width="120%" height="130%">
+      <feDropShadow dx="0" dy="2" stdDeviation="2.5" flood-color="#0369a1" flood-opacity="0.35"/>
+    </filter>
+  </defs>
+
+  <!-- Background Ripple -->
+  <ellipse cx="32" cy="56" rx="20" ry="4.5" fill="url(#rippleGrad)" />
+
+  <!-- Main Water Droplet Shape -->
+  <path d="M32 6 C32 6 12 28 12 42 C12 53.05 20.95 60 32 60 C43.05 60 52 53.05 52 42 C52 28 32 6 32 6 Z" 
+        fill="url(#dropGrad)" filter="url(#shadow)" />
+
+  <!-- Glossy Highlight / Reflection -->
+  <path d="M25 18 C28 13 32 9 32 9 C32 9 20 25 18 38 C17.3 42.5 19 46 22 47 C20 45 19 40 20 36 C21 30 23.5 22 25 18 Z" 
+        fill="url(#shineGrad)" />
+
+  <!-- Small Sparkle Highlight -->
+  <circle cx="23" cy="20" r="2.2" fill="#ffffff" opacity="0.9" />
+</svg>
