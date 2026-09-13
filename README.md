@@ -40,7 +40,7 @@ web_water/
 │   └── database.php          # Koneksi database MySQL PDO berbasis Environment Variables
 ├── schema.sql                # Skema DDL tabel MySQL + data awal kategori & contoh transaksi
 ├── vercel.json               # Konfigurasi deployment serverless PHP untuk Vercel
-├── index.php                 # Tampilan UI Dashboard utama (Single Page Experience)
+├── index.html                # Tampilan UI Dashboard utama (Static Single Page Frontend)
 └── README.md                 # Dokumentasi proyek & panduan deployment
 ```
 

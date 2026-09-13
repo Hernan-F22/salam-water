@@ -1,0 +1,529 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Salam Water - Laporan Keuangan Depot Air Minum Isi Ulang</title>
+    <meta name="description" content="Aplikasi web manajemen keuangan dan laporan arus kas depot air minum isi ulang Salam Water">
+    <link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+
+    <!-- ==========================================================
+         TOP HEADER BAR
+         ========================================================== -->
+    <header class="header-top no-print">
+        <div class="container">
+            <div class="header-inner">
+                <div class="brand-group">
+                    <div class="brand-icon">💧</div>
+                    <div>
+                        <h1 class="brand-title">SALAM WATER</h1>
+                        <p class="brand-subtitle">Sistem Keuangan & Laporan Depot Air Minum Isi Ulang</p>
+                    </div>
+                </div>
+                <div class="header-meta">
+                    <div id="live-clock-badge" class="badge-live-date">📅 Memuat tanggal...</div>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- ==========================================================
+         NAVIGATION TABS
+         ========================================================== -->
+    <nav class="nav-tabs-wrapper no-print">
+        <div class="container">
+            <div class="nav-tabs">
+                <button class="nav-btn active" data-tab="dashboard">
+                    📊 <span>Ringkasan Dashboard</span>
+                </button>
+                <button class="nav-btn" data-tab="penjualan">
+                    💧 <span>Penjualan Galon</span>
+                </button>
+                <button class="nav-btn" data-tab="pengeluaran">
+                    💸 <span>Pengeluaran Operasional</span>
+                </button>
+                <button class="nav-btn" data-tab="laporan">
+                    📑 <span>Laporan & Buku Kas</span>
+                </button>
+            </div>
+        </div>
+    </nav>
+
+    <!-- ==========================================================
+         MAIN CONTENT AREA
+         ========================================================== -->
+    <main class="main-content">
+        <div class="container">
+
+            <!-- ==========================================================
+                 TAB 1: DASHBOARD RINGKASAN
+                 ========================================================== -->
+            <section id="pane-dashboard" class="tab-pane active">
+                <div class="section-header">
+                    <div>
+                        <h2 class="section-title">Ringkasan Kinerja Depot</h2>
+                        <p class="section-desc">Pantau omzet penjualan, biaya operasional, dan laba bersih secara real-time.</p>
+                    </div>
+                </div>
+
+                <!-- 4 Kartu Metrik Utama -->
+                <div class="stats-grid">
+                    <!-- Kartu 1: Omzet Penjualan -->
+                    <div class="stat-card">
+                        <div class="stat-header">
+                            <span class="stat-label">Pemasukan Hari Ini</span>
+                            <div class="stat-icon" style="background: var(--primary-light); color: var(--primary-dark);">💰</div>
+                        </div>
+                        <div class="stat-value" id="dash-omzet-today">Rp 0</div>
+                        <div class="stat-footer">
+                            <span>Bulan Ini: <strong id="dash-omzet-month">Rp 0</strong></span>
+                            <span>Tahun Ini: <strong id="dash-omzet-year">Rp 0</strong></span>
+                        </div>
+                    </div>
+
+                    <!-- Kartu 2: Galon Terjual -->
+                    <div class="stat-card card-purple">
+                        <div class="stat-header">
+                            <span class="stat-label">Galon Terjual Hari Ini</span>
+                            <div class="stat-icon" style="background: var(--purple-light); color: var(--purple);">🪣</div>
+                        </div>
+                        <div class="stat-value" id="dash-galon-today">0 Galon</div>
+                        <div class="stat-footer">
+                            <span id="dash-galon-breakdown">Memuat detail galon...</span>
+                        </div>
+                    </div>
+
+                    <!-- Kartu 3: Pengeluaran Operasional -->
+                    <div class="stat-card card-danger">
+                        <div class="stat-header">
+                            <span class="stat-label">Pengeluaran Hari Ini</span>
+                            <div class="stat-icon" style="background: var(--danger-light); color: var(--danger-dark);">📉</div>
+                        </div>
+                        <div class="stat-value" id="dash-expense-today">Rp 0</div>
+                        <div class="stat-footer">
+                            <span id="dash-expense-month">Bulan Ini: Rp 0</span>
+                        </div>
+                    </div>
+
+                    <!-- Kartu 4: Laba Bersih Otomatis -->
+                    <div id="card-profit" class="stat-card card-success">
+                        <div class="stat-header">
+                            <span class="stat-label">Laba Bersih Hari Ini</span>
+                            <div class="stat-icon" style="background: var(--success-light); color: var(--success-dark);">📈</div>
+                        </div>
+                        <div class="stat-value" id="dash-profit-today">Rp 0</div>
+                        <div class="stat-footer">
+                            <span id="dash-profit-month">Bulan Ini: Rp 0</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 2 Kolom: Analisis Pengeluaran & Metode Bayar -->
+                <div class="grid-2col">
+                    <!-- Breakdown Pengeluaran Bulan Ini -->
+                    <div class="card">
+                        <div class="card-header">
+                            <h3 class="card-title">📦 Pengeluaran Operasional Bulan Ini</h3>
+                        </div>
+                        <div class="card-body">
+                            <ul id="dash-breakdown-kategori" class="breakdown-list">
+                                <li style="color:#94a3b8; font-size:0.85rem;">Memuat rincian kategori...</li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <!-- Breakdown Metode Pembayaran & Saldo Kasir -->
+                    <div class="card">
+                        <div class="card-header">
+                            <h3 class="card-title">💳 Metode Pembayaran Penjualan Bulan Ini</h3>
+                        </div>
+                        <div class="card-body">
+                            <ul id="dash-breakdown-metode" class="breakdown-list">
+                                <li style="color:#94a3b8; font-size:0.85rem;">Memuat metode bayar...</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Tabel Transaksi Penjualan Terkini -->
+                <div class="card">
+                    <div class="card-header">
+                        <h3 class="card-title">⏱️ Transaksi Penjualan Terakhir</h3>
+                        <button class="btn btn-sm btn-secondary" onclick="App.switchTab('penjualan')">Lihat Semua</button>
+                    </div>
+                    <div class="table-responsive">
+                        <table class="custom-table">
+                            <thead>
+                                <tr>
+                                    <th>Tanggal</th>
+                                    <th>Keterangan</th>
+                                    <th>Total</th>
+                                    <th>Metode</th>
+                                </tr>
+                            </thead>
+                            <tbody id="dash-tbody-recent">
+                                <tr><td colspan="4" style="text-align:center;">Memuat data...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ==========================================================
+                 TAB 2: TRANSAKSI PENJUALAN
+                 ========================================================== -->
+            <section id="pane-penjualan" class="tab-pane">
+                <div class="section-header">
+                    <div>
+                        <h2 class="section-title">Pencatatan Penjualan Galon</h2>
+                        <p class="section-desc">Catat penjualan air isi ulang harian atau pembelian galon baru.</p>
+                    </div>
+                </div>
+
+                <!-- Form Input Penjualan -->
+                <div class="card" style="margin-bottom: 1.75rem;">
+                    <div class="card-header">
+                        <h3 class="card-title">➕ Form Input Penjualan</h3>
+                    </div>
+                    <div class="card-body">
+                        <form id="form-penjualan">
+                            <div class="form-grid">
+                                <!-- Tanggal -->
+                                <div class="form-group">
+                                    <label class="form-label" for="penjualan-tanggal">Tanggal Transaksi</label>
+                                    <input type="date" id="penjualan-tanggal" class="form-control" required>
+                                </div>
+
+                                <!-- Jenis Transaksi -->
+                                <div class="form-group">
+                                    <label class="form-label" for="penjualan-jenis">Jenis Transaksi</label>
+                                    <select id="penjualan-jenis" class="form-control" required>
+                                        <option value="isi_ulang">💧 Isi Ulang Air Galon</option>
+                                        <option value="galon_baru">🪣 Pembelian Galon Baru</option>
+                                    </select>
+                                </div>
+
+                                <!-- Jumlah Galon -->
+                                <div class="form-group">
+                                    <label class="form-label" for="penjualan-jumlah">Jumlah Galon</label>
+                                    <input type="number" id="penjualan-jumlah" class="form-control" min="1" value="1" required>
+                                    <div class="preset-group">
+                                        <button type="button" class="btn-preset btn-preset-qty" data-qty="1" data-mode="set">1</button>
+                                        <button type="button" class="btn-preset btn-preset-qty" data-qty="2" data-mode="set">2</button>
+                                        <button type="button" class="btn-preset btn-preset-qty" data-qty="5" data-mode="set">5</button>
+                                        <button type="button" class="btn-preset btn-preset-qty" data-qty="10" data-mode="set">10</button>
+                                        <button type="button" class="btn-preset btn-preset-qty" data-qty="5" data-mode="add">+5</button>
+                                    </div>
+                                </div>
+
+                                <!-- Harga Satuan -->
+                                <div class="form-group">
+                                    <label class="form-label" for="penjualan-harga">Harga Satuan (Rp)</label>
+                                    <input type="number" id="penjualan-harga" class="form-control" min="0" step="500" value="5000" required>
+                                    <div class="preset-group">
+                                        <button type="button" class="btn-preset btn-preset-price" data-price="5000">Rp 5.000</button>
+                                        <button type="button" class="btn-preset btn-preset-price" data-price="6000">Rp 6.000</button>
+                                        <button type="button" class="btn-preset btn-preset-price" data-price="22000">Rp 22.000</button>
+                                        <button type="button" class="btn-preset btn-preset-price" data-price="65000">Rp 65.000</button>
+                                    </div>
+                                </div>
+
+                                <!-- Metode Pembayaran -->
+                                <div class="form-group">
+                                    <label class="form-label" for="penjualan-metode">Metode Pembayaran</label>
+                                    <select id="penjualan-metode" class="form-control" required>
+                                        <option value="tunai">💵 Tunai (Cash)</option>
+                                        <option value="qris">📱 QRIS</option>
+                                        <option value="transfer">🏦 Transfer Bank</option>
+                                    </select>
+                                </div>
+
+                                <!-- Catatan / Pembeli -->
+                                <div class="form-group">
+                                    <label class="form-label" for="penjualan-catatan">Catatan / Pelanggan (Opsional)</label>
+                                    <input type="text" id="penjualan-catatan" class="form-control" placeholder="Contoh: Antar Warung Bu Siti / Mas Dimas">
+                                </div>
+                            </div>
+
+                            <!-- Kalkulasi Realtime Total -->
+                            <div class="total-highlight-box">
+                                <span class="total-highlight-label">Total Pembayaran:</span>
+                                <span id="penjualan-total-display" class="total-highlight-val">Rp 5.000</span>
+                            </div>
+
+                            <div style="margin-top: 1.25rem;">
+                                <button type="submit" class="btn btn-primary">
+                                    💾 Simpan Transaksi Penjualan
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+
+                <!-- Tabel Riwayat Penjualan -->
+                <div class="card">
+                    <div class="card-header">
+                        <h3 class="card-title">📋 Riwayat Transaksi Penjualan</h3>
+                    </div>
+                    <div class="table-responsive">
+                        <table class="custom-table">
+                            <thead>
+                                <tr>
+                                    <th>No</th>
+                                    <th>Tanggal</th>
+                                    <th>Jenis</th>
+                                    <th>Jumlah</th>
+                                    <th>Harga Satuan</th>
+                                    <th>Total</th>
+                                    <th>Metode</th>
+                                    <th>Catatan</th>
+                                    <th class="action-col">Aksi</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tbody-penjualan">
+                                <tr><td colspan="9" style="text-align:center;">Memuat data...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ==========================================================
+                 TAB 3: PENGELUARAN OPERASIONAL
+                 ========================================================== -->
+            <section id="pane-pengeluaran" class="tab-pane">
+                <div class="section-header">
+                    <div>
+                        <h2 class="section-title">Biaya & Pengeluaran Operasional</h2>
+                        <p class="section-desc">Catat pengeluaran seperti tutup galon, tisu, air tangki sumber, token listrik, dan filter.</p>
+                    </div>
+                </div>
+
+                <!-- Form Input Pengeluaran -->
+                <div class="card" style="margin-bottom: 1.75rem;">
+                    <div class="card-header">
+                        <h3 class="card-title">➕ Form Catat Pengeluaran</h3>
+                    </div>
+                    <div class="card-body">
+                        <form id="form-pengeluaran">
+                            <div class="form-grid">
+                                <!-- Tanggal -->
+                                <div class="form-group">
+                                    <label class="form-label" for="pengeluaran-tanggal">Tanggal Pengeluaran</label>
+                                    <input type="date" id="pengeluaran-tanggal" class="form-control" required>
+                                </div>
+
+                                <!-- Kategori -->
+                                <div class="form-group">
+                                    <label class="form-label" for="pengeluaran-kategori">Kategori Pengeluaran</label>
+                                    <select id="pengeluaran-kategori" class="form-control" required>
+                                        <option value="">-- Memuat Kategori... --</option>
+                                    </select>
+                                </div>
+
+                                <!-- Nominal -->
+                                <div class="form-group">
+                                    <label class="form-label" for="pengeluaran-nominal">Nominal Pengeluaran (Rp)</label>
+                                    <input type="number" id="pengeluaran-nominal" class="form-control" min="1000" step="1000" placeholder="Contoh: 65000" required>
+                                </div>
+
+                                <!-- Catatan -->
+                                <div class="form-group col-span-2">
+                                    <label class="form-label" for="pengeluaran-catatan">Keterangan / Catatan</label>
+                                    <input type="text" id="pengeluaran-catatan" class="form-control" placeholder="Contoh: Beli 1 dus tutup galon biru & 2 pack tisu antiseptik">
+                                </div>
+                            </div>
+
+                            <div style="margin-top: 1.25rem;">
+                                <button type="submit" class="btn btn-primary">
+                                    💾 Simpan Pengeluaran
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+
+                <!-- Tabel Riwayat Pengeluaran -->
+                <div class="card">
+                    <div class="card-header">
+                        <h3 class="card-title">📋 Riwayat Pengeluaran Operasional</h3>
+                    </div>
+                    <div class="table-responsive">
+                        <table class="custom-table">
+                            <thead>
+                                <tr>
+                                    <th>No</th>
+                                    <th>Tanggal</th>
+                                    <th>Kategori</th>
+                                    <th>Nominal</th>
+                                    <th>Catatan</th>
+                                    <th class="action-col">Aksi</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tbody-pengeluaran">
+                                <tr><td colspan="6" style="text-align:center;">Memuat data...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ==========================================================
+                 TAB 4: LAPORAN & BUKU KAS (PRINT READY)
+                 ========================================================== -->
+            <section id="pane-laporan" class="tab-pane">
+                
+                <!-- HEADER KHUSUS CETAK RESMI (Hanya Muncul saat Dicetak) -->
+                <div class="print-only print-header">
+                    <h1>DEPOT AIR MINUM ISI ULANG "SALAM WATER"</h1>
+                    <p>Jl. Raya Air Sehat No. 123 - Layanan Air Minum Higienis & Berkualitas</p>
+                    <p><strong>LAPORAN ARUS KAS & KEUANGAN OPERASIONAL</strong></p>
+                    <div class="print-meta-grid" style="margin-top: 10px;">
+                        <span>Periode: <strong id="print-periode-text">-</strong></span>
+                        <span>Dicetak Pada: <strong id="print-tgl-cetak">-</strong></span>
+                    </div>
+                </div>
+
+                <div class="section-header no-print">
+                    <div>
+                        <h2 class="section-title">Laporan Keuangan & Buku Kas</h2>
+                        <p class="section-desc">Rekapitulasi arus kas pemasukan dan pengeluaran dengan filter tanggal fleksibel.</p>
+                    </div>
+                    <div>
+                        <button id="btn-print-laporan" class="btn btn-success">
+                            🖨️ Cetak Laporan / Simpan PDF
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Filter Card (Sembunyi saat Print) -->
+                <div class="filter-card no-print">
+                    <div class="period-pills">
+                        <button type="button" class="period-pill" data-period="hari_ini">Hari Ini</button>
+                        <button type="button" class="period-pill" data-period="7_hari">7 Hari Terakhir</button>
+                        <button type="button" class="period-pill active" data-period="bulan_ini">Bulan Ini</button>
+                        <button type="button" class="period-pill" data-period="bulan_lalu">Bulan Lalu</button>
+                    </div>
+
+                    <form id="form-filter-laporan" class="filter-row">
+                        <div class="filter-item">
+                            <label class="form-label" for="filter-start-date">Dari Tanggal</label>
+                            <input type="date" id="filter-start-date" class="form-control" required>
+                        </div>
+                        <div class="filter-item">
+                            <label class="form-label" for="filter-end-date">Sampai Tanggal</label>
+                            <input type="date" id="filter-end-date" class="form-control" required>
+                        </div>
+                        <div style="padding-bottom: 2px;">
+                            <button type="submit" class="btn btn-primary">🔍 Filter Data</button>
+                        </div>
+                    </form>
+                </div>
+
+                <!-- Ringkasan Periode Laporan -->
+                <div class="stats-grid no-print">
+                    <div class="stat-card">
+                        <div class="stat-header">
+                            <span class="stat-label">Total Pemasukan</span>
+                            <span class="stat-icon" style="background:var(--success-light); color:var(--success-dark);">📈</span>
+                        </div>
+                        <div class="stat-value text-masuk" id="rep-total-masuk">Rp 0</div>
+                        <div class="stat-footer">
+                            <span id="rep-total-galon">0 Galon</span>
+                        </div>
+                    </div>
+
+                    <div class="stat-card card-danger">
+                        <div class="stat-header">
+                            <span class="stat-label">Total Pengeluaran</span>
+                            <span class="stat-icon" style="background:var(--danger-light); color:var(--danger-dark);">📉</span>
+                        </div>
+                        <div class="stat-value text-keluar" id="rep-total-keluar">Rp 0</div>
+                        <div class="stat-footer">
+                            <span>Biaya Operasional</span>
+                        </div>
+                    </div>
+
+                    <div class="stat-card card-success">
+                        <div class="stat-header">
+                            <span class="stat-label">Laba / Rugi Bersih</span>
+                            <span class="stat-icon" style="background:var(--primary-light); color:var(--primary-dark);">⚖️</span>
+                        </div>
+                        <div class="stat-value" id="rep-laba-bersih">Rp 0</div>
+                        <div class="stat-footer">
+                            <span>Pemasukan - Pengeluaran</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Tabel Buku Kas Kronologis -->
+                <div class="card">
+                    <div class="card-header no-print">
+                        <h3 class="card-title">📖 Buku Kas Arus Keuangan</h3>
+                    </div>
+                    <div class="table-responsive">
+                        <table class="custom-table">
+                            <thead>
+                                <tr>
+                                    <th style="width: 45px;">No</th>
+                                    <th style="width: 130px;">Tanggal</th>
+                                    <th>Uraian Transaksi</th>
+                                    <th>Catatan</th>
+                                    <th style="text-align: right; width: 140px;">Pemasukan (Kredit)</th>
+                                    <th style="text-align: right; width: 140px;">Pengeluaran (Debit)</th>
+                                    <th style="text-align: right; width: 150px;">Saldo Berjalan</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tbody-laporan">
+                                <tr><td colspan="7" style="text-align:center;">Memuat laporan...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Kotak Rekapitulasi Khusus Format Cetak / Print -->
+                <div class="print-only print-summary-box">
+                    <table class="print-summary-table">
+                        <tr>
+                            <td>Total Pemasukan:</td>
+                            <td style="text-align: right;" id="print-rep-masuk">Rp 0</td>
+                        </tr>
+                        <tr>
+                            <td>Total Pengeluaran Operasional:</td>
+                            <td style="text-align: right;" id="print-rep-keluar">Rp 0</td>
+                        </tr>
+                        <tr class="total-row">
+                            <td>Laba / Rugi Bersih:</td>
+                            <td style="text-align: right;" id="print-rep-laba">Rp 0</td>
+                        </tr>
+                    </table>
+                </div>
+
+                <!-- Kolom Tanda Tangan Cetak Resmi -->
+                <div class="print-only print-signatures">
+                    <div class="signature-box">
+                        <p>Dibuat Oleh,</p>
+                        <div class="signature-space"></div>
+                        <p class="signature-line">( Kasir / Operator )</p>
+                    </div>
+                    <div class="signature-box">
+                        <p>Mengetahui,</p>
+                        <div class="signature-space"></div>
+                        <p class="signature-line">( Pengelola Depot Salam Water )</p>
+                    </div>
+                </div>
+
+            </section>
+
+        </div>
+    </main>
+
+    <!-- Toast Notification Container -->
+    <div class="toast-container"></div>
+
+    <!-- Script JS -->
+    <script src="assets/app.js"></script>
+</body>
+</html>
