@@ -35,9 +35,10 @@ if ($action === 'update_status') {
 }
 
 /**
- * Handle Pembuatan Pesanan Baru (Publik / Tamu Tanpa Login)
+ * Handle Pembuatan Pesanan Baru (Khusus Admin)
  */
 function handle_create_pesanan($pdo) {
+    require_admin_auth();
     $input = get_json_input();
 
     $nama = isset($input['nama_pelanggan']) ? trim($input['nama_pelanggan']) : '';
@@ -47,7 +48,9 @@ function handle_create_pesanan($pdo) {
     $harga_satuan = isset($input['harga_satuan']) ? (float)$input['harga_satuan'] : 5000.00;
     $jumlah_galon = isset($input['jumlah_galon']) ? (int)$input['jumlah_galon'] : 1;
     $metode_pembayaran = isset($input['metode_pembayaran']) ? trim($input['metode_pembayaran']) : 'tunai';
+    $status_awal = isset($input['status']) && in_array($input['status'], ['menunggu', 'diproses']) ? $input['status'] : 'menunggu';
     $catatan = isset($input['catatan']) ? trim($input['catatan']) : null;
+    $tanggal = !empty($input['tanggal']) ? trim($input['tanggal']) : date('Y-m-d');
 
     // Validasi input pemesan
     if (empty($nama)) {
@@ -77,7 +80,6 @@ function handle_create_pesanan($pdo) {
     }
 
     $total = (float)($jumlah_galon * $harga_satuan);
-    $tanggal = date('Y-m-d');
     
     // Generate nomor pesanan unik misal: ORD-20260913-A1B2
     $nomor_pesanan = 'ORD-' . date('Ymd') . '-' . strtoupper(substr(bin2hex(random_bytes(2)), 0, 4));
@@ -91,7 +93,7 @@ function handle_create_pesanan($pdo) {
             ) VALUES (
                 :nomor, :tanggal, :nama, :nohp, :alamat,
                 :jenis, :harga, :jumlah, :total,
-                :metode, 'menunggu', :catatan
+                :metode, :status, :catatan
             )
         ");
 
@@ -106,6 +108,7 @@ function handle_create_pesanan($pdo) {
             ':jumlah'  => $jumlah_galon,
             ':total'   => $total,
             ':metode'  => $metode_pembayaran,
+            ':status'  => $status_awal,
             ':catatan' => $catatan
         ]);
 
@@ -151,31 +154,9 @@ function handle_create_pesanan($pdo) {
 }
 
 /**
- * Handle Mengambil Pesanan (Bisa Lacak oleh Tamu atau Daftar Semua oleh Admin)
+ * Handle Mengambil Pesanan (Khusus Admin)
  */
 function handle_get_pesanan($pdo) {
-    // 1. Jika ada parameter no_hp -> Publik melacak pesanannya sendiri
-    if (!empty($_GET['no_hp'])) {
-        $no_hp = trim($_GET['no_hp']);
-        try {
-            $stmt = $pdo->prepare("
-                SELECT id, nomor_pesanan, tanggal, nama_pelanggan, no_hp, alamat, 
-                       jenis_galon, harga_satuan, jumlah_galon, total, 
-                       metode_pembayaran, status, catatan, created_at
-                FROM pesanan 
-                WHERE no_hp = :nohp OR nomor_pesanan = :nomor
-                ORDER BY id DESC LIMIT 20
-            ");
-            $stmt->execute([':nohp' => $no_hp, ':nomor' => $no_hp]);
-            $orders = $stmt->fetchAll();
-            json_response(true, $orders, 'Data riwayat pesanan berhasil ditemukan.');
-        } catch (PDOException $e) {
-            json_response(false, null, 'Gagal melacak pesanan: ' . $e->getMessage(), 500);
-        }
-        return;
-    }
-
-    // 2. Jika tidak ada no_hp -> Wajib Admin Auth untuk melihat semua pesanan
     require_admin_auth();
 
     try {

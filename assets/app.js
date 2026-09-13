@@ -12,13 +12,13 @@ document.addEventListener('DOMContentLoaded', () => {
 const App = {
     // State aplikasi
     state: {
-        currentTab: 'pesan',
+        currentTab: 'login',
         auth: {
             isAdmin: false,
             token: null,
             username: ''
         },
-        orderProduct: {
+        adminNewOrderProduct: {
             jenis: 'isi_ulang',
             harga: 5000
         },
@@ -34,8 +34,7 @@ const App = {
         this.initAuth();
         this.initTabs();
         this.initLiveClock();
-        this.initPublicOrderForm();
-        this.initOrderTracking();
+        this.initAdminNewOrderForm();
         this.initAdminOrderFilters();
         this.initSalesCalculations();
         this.initExpenseForm();
@@ -155,15 +154,17 @@ const App = {
             this.loadPenjualanList();
             this.loadPengeluaranList();
             this.loadLaporanData();
+
+            // Pindahkan tab ke antrean jika sebelumnya di login
+            if (this.state.currentTab === 'login' || !this.state.currentTab) {
+                this.switchTab('antrean');
+            }
         } else {
             body.classList.remove('role-admin');
             body.classList.add('role-guest');
 
-            // Jika sedang berada di tab admin, kembalikan ke tab pesan
-            const adminTabs = ['antrean', 'dashboard', 'penjualan', 'pengeluaran', 'laporan'];
-            if (adminTabs.includes(this.state.currentTab)) {
-                this.switchTab('pesan');
-            }
+            // Saat logout / sesi habis, arahkan ke tab login
+            this.switchTab('login');
         }
     },
 
@@ -294,7 +295,7 @@ const App = {
                 } catch (e) {}
                 sessionStorage.removeItem('salam_water_admin_token');
                 this.setAdminState(false, null);
-                this.switchTab('pesan');
+                this.switchTab('login');
                 this.showToast('Anda telah keluar dari mode admin.');
             });
         }
@@ -363,47 +364,88 @@ const App = {
     },
 
     // ==========================================================
-    // PORTAL PEMESANAN PUBLIK (TAMU TANPA LOGIN)
+    // FORM INPUT PESANAN BARU OLEH ADMIN (TELEPON / WA)
     // ==========================================================
-    initPublicOrderForm() {
-        const form = document.getElementById('form-pesan-online');
-        const qtyInput = document.getElementById('order-jumlah');
-        const totalDisplay = document.getElementById('order-total-display');
-        const radioCards = document.querySelectorAll('.product-radio-card');
+    initAdminNewOrderForm() {
+        const btnToggle = document.getElementById('btn-toggle-new-order');
+        const btnClose = document.getElementById('btn-close-new-order');
+        const btnCancel = document.getElementById('btn-cancel-admin-order');
+        const boxNewOrder = document.getElementById('box-admin-new-order');
+        const form = document.getElementById('form-admin-new-order');
+        const dateInput = document.getElementById('admin-order-tanggal');
+        const qtyInput = document.getElementById('admin-order-jumlah');
+        const totalDisplay = document.getElementById('admin-order-total-display');
+        const radioCards = document.querySelectorAll('#box-admin-new-order .product-radio-card');
 
-        const calculateOrderTotal = () => {
-            const qty = parseInt(qtyInput.value, 10) || 1;
-            const price = this.state.orderProduct.harga;
+        // Set default tanggal hari ini
+        if (dateInput && !dateInput.value) {
+            const today = new Date();
+            const yyyy = today.getFullYear();
+            const mm = String(today.getMonth() + 1).padStart(2, '0');
+            const dd = String(today.getDate()).padStart(2, '0');
+            dateInput.value = `${yyyy}-${mm}-${dd}`;
+        }
+
+        // State produk pesanan admin
+        this.state.adminNewOrderProduct = {
+            jenis: 'isi_ulang',
+            harga: 5000
+        };
+
+        const calculateAdminOrderTotal = () => {
+            const qty = parseInt(qtyInput ? qtyInput.value : 1, 10) || 1;
+            const price = this.state.adminNewOrderProduct ? this.state.adminNewOrderProduct.harga : 5000;
             const total = qty * price;
             if (totalDisplay) {
                 totalDisplay.textContent = this.formatRupiah(total);
             }
         };
 
-        const updateAddressMode = (price) => {
-            const labelEl = document.getElementById('label-order-alamat');
-            const textareaEl = document.getElementById('order-alamat');
-            const helperEl = document.getElementById('helper-order-alamat');
+        const updateAdminAddressMode = (price) => {
+            const labelEl = document.getElementById('label-admin-order-alamat');
+            const textareaEl = document.getElementById('admin-order-alamat');
+            const helperEl = document.getElementById('helper-admin-order-alamat');
             if (!textareaEl) return;
 
             if (parseFloat(price) === 5000) {
-                if (labelEl) labelEl.innerHTML = '🏪 Catatan Pengambilan / Info Tambahan <small style="font-weight:400; color:var(--text-muted);">(Opsional - Ambil di Depot)</small>';
+                if (labelEl) labelEl.innerHTML = '🏪 Info Pengambilan <small style="font-weight:400; color:var(--text-muted);">(Opsional - Ambil di Depot)</small>';
                 textareaEl.placeholder = 'Bisa dikosongkan (ambil sendiri di depot) atau isi estimasi jam pengambilan';
                 textareaEl.required = false;
                 if (helperEl) {
-                    helperEl.textContent = 'Karena Anda memilih tarif Rp 5.000, pesanan diambil sendiri di depot tanpa pengantaran.';
+                    helperEl.textContent = 'Tarif Rp 5.000 untuk pesanan yang diambil langsung di depot (tanpa pengantaran).';
                     helperEl.style.color = '#4338ca';
                 }
             } else {
-                if (labelEl) labelEl.innerHTML = '🚚 Alamat Lengkap Pengantaran <span style="color:#ef4444;">*</span> <small style="font-weight:400; color:var(--text-muted);">(Pesan Antar)</small>';
-                textareaEl.placeholder = 'Contoh: Jl. Melati No. 12 RT 03/05 (Rumah pagar hitam sebelah warung)';
+                if (labelEl) labelEl.innerHTML = '🚚 Alamat Pengantaran <span style="color:#ef4444;">*</span> <small style="font-weight:400; color:var(--text-muted);">(Pesan Antar)</small>';
+                textareaEl.placeholder = 'Contoh: Jl. Mawar No. 15 RT 02/04 (Rumah pagar hitam)';
                 textareaEl.required = true;
                 if (helperEl) {
-                    helperEl.textContent = 'Pesanan akan diproses dan diantar langsung oleh kurir depot ke alamat Anda.';
+                    helperEl.textContent = 'Pesanan akan diantar langsung oleh kurir depot ke alamat pelanggan.';
                     helperEl.style.color = 'var(--text-muted)';
                 }
             }
         };
+
+        // Inisialisasi awal kalkulasi & mode alamat
+        calculateAdminOrderTotal();
+        updateAdminAddressMode(5000);
+
+        // Toggle buka/tutup form
+        const toggleBox = (show) => {
+            if (!boxNewOrder) return;
+            const isCurrentlyHidden = boxNewOrder.style.display === 'none' || !boxNewOrder.style.display;
+            const willShow = show !== undefined ? show : isCurrentlyHidden;
+            boxNewOrder.style.display = willShow ? 'block' : 'none';
+            if (willShow) {
+                boxNewOrder.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                const nameInput = document.getElementById('admin-order-nama');
+                if (nameInput) nameInput.focus();
+            }
+        };
+
+        if (btnToggle) btnToggle.addEventListener('click', () => toggleBox());
+        if (btnClose) btnClose.addEventListener('click', () => toggleBox(false));
+        if (btnCancel) btnCancel.addEventListener('click', () => toggleBox(false));
 
         // Radio Card Selection
         radioCards.forEach(card => {
@@ -411,318 +453,97 @@ const App = {
                 radioCards.forEach(c => c.classList.remove('active'));
                 card.classList.add('active');
 
-                this.state.orderProduct.jenis = card.dataset.jenis;
-                this.state.orderProduct.harga = parseFloat(card.dataset.harga);
-                calculateOrderTotal();
-                updateAddressMode(this.state.orderProduct.harga);
+                this.state.adminNewOrderProduct.jenis = card.dataset.jenis;
+                this.state.adminNewOrderProduct.harga = parseFloat(card.dataset.harga);
+                calculateAdminOrderTotal();
+                updateAdminAddressMode(this.state.adminNewOrderProduct.harga);
             });
         });
-
-        // Inisialisasi mode alamat awal
-        updateAddressMode(this.state.orderProduct.harga || 5000);
 
         // Quantity input & preset buttons
-        if (qtyInput) qtyInput.addEventListener('input', calculateOrderTotal);
+        if (qtyInput) qtyInput.addEventListener('input', calculateAdminOrderTotal);
 
-        document.querySelectorAll('.btn-preset-order-qty').forEach(btn => {
+        document.querySelectorAll('.btn-preset-admin-qty').forEach(btn => {
             btn.addEventListener('click', () => {
-                qtyInput.value = btn.dataset.qty;
-                calculateOrderTotal();
+                if (qtyInput) {
+                    qtyInput.value = btn.dataset.qty;
+                    calculateAdminOrderTotal();
+                }
             });
         });
 
-        // Submit Pesanan Pelanggan
+        // Submit Pesanan Baru oleh Admin
         if (form) {
             form.addEventListener('submit', async (e) => {
                 e.preventDefault();
-                const submitBtn = document.getElementById('btn-submit-order');
-                submitBtn.disabled = true;
-                submitBtn.innerHTML = '⏳ Mengirim Pesanan...';
+                const submitBtn = document.getElementById('btn-submit-admin-order');
+                if (submitBtn) {
+                    submitBtn.disabled = true;
+                    submitBtn.innerHTML = '⏳ Menyimpan Pesanan...';
+                }
 
-                let alamatVal = document.getElementById('order-alamat').value.trim();
-                const isAmbilDepot = parseFloat(this.state.orderProduct.harga) === 5000;
+                let alamatVal = (document.getElementById('admin-order-alamat')?.value || '').trim();
+                const isAmbilDepot = parseFloat(this.state.adminNewOrderProduct.harga) === 5000;
                 if (!alamatVal && isAmbilDepot) {
                     alamatVal = 'Ambil Sendiri di Depot';
                 }
 
                 const payload = {
-                    nama_pelanggan: document.getElementById('order-nama').value.trim(),
-                    no_hp: document.getElementById('order-nohp').value.trim(),
+                    tanggal: document.getElementById('admin-order-tanggal')?.value || '',
+                    status: document.getElementById('admin-order-status')?.value || 'menunggu',
+                    nama_pelanggan: document.getElementById('admin-order-nama')?.value.trim() || '',
+                    no_hp: document.getElementById('admin-order-nohp')?.value.trim() || '',
                     alamat: alamatVal,
-                    jenis_galon: this.state.orderProduct.jenis,
-                    harga_satuan: this.state.orderProduct.harga,
-                    jumlah_galon: parseInt(document.getElementById('order-jumlah').value, 10),
-                    metode_pembayaran: document.getElementById('order-metode').value,
-                    catatan: document.getElementById('order-catatan').value.trim()
+                    jenis_galon: this.state.adminNewOrderProduct.jenis,
+                    harga_satuan: this.state.adminNewOrderProduct.harga,
+                    jumlah_galon: parseInt(qtyInput ? qtyInput.value : 1, 10) || 1,
+                    metode_pembayaran: document.getElementById('admin-order-metode')?.value || 'tunai',
+                    catatan: (document.getElementById('admin-order-catatan')?.value || '').trim()
                 };
 
                 try {
-                    const res = await fetch('api/pesanan.php', {
+                    const res = await this.authFetch('api/pesanan.php', {
                         method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify(payload)
                     });
                     const result = await res.json();
 
                     if (result.success && result.data) {
-                        this.renderOrderSuccess(result.data, false);
-                    } else {
-                        const errMsg = (result.message || '').toLowerCase();
-                        // Jika database belum terhubung di Vercel, jangan gagalkan pesanan pelanggan
-                        if (errMsg.includes('database') || errMsg.includes('connection refused') || errMsg.includes('sqlstate')) {
-                            const fallbackData = this.createFallbackOrderData(payload);
-                            this.renderOrderSuccess(fallbackData, true);
-                        } else {
-                            this.showToast(result.message || 'Gagal mengirim pesanan.', 'error');
+                        this.showToast(`Pesanan #${result.data.nomor_pesanan} berhasil disimpan ke antrean!`);
+                        
+                        // Reset formulir
+                        form.reset();
+                        if (dateInput) {
+                            const today = new Date();
+                            const yyyy = today.getFullYear();
+                            const mm = String(today.getMonth() + 1).padStart(2, '0');
+                            const dd = String(today.getDate()).padStart(2, '0');
+                            dateInput.value = `${yyyy}-${mm}-${dd}`;
                         }
+                        if (qtyInput) qtyInput.value = '1';
+                        
+                        // Kembalikan pilihan default ke 5000
+                        radioCards.forEach((c, idx) => c.classList.toggle('active', idx === 0));
+                        this.state.adminNewOrderProduct = { jenis: 'isi_ulang', harga: 5000 };
+                        calculateAdminOrderTotal();
+                        updateAdminAddressMode(5000);
+
+                        // Sembunyikan form dan reload antrean
+                        toggleBox(false);
+                        this.loadAdminOrders();
+                    } else {
+                        this.showToast(result.message || 'Gagal menyimpan pesanan.', 'error');
                     }
                 } catch (err) {
-                    // Fallback jika jaringan/server error
-                    const fallbackData = this.createFallbackOrderData(payload);
-                    this.renderOrderSuccess(fallbackData, true);
+                    this.showToast('Gagal terhubung ke server saat menyimpan pesanan.', 'error');
                 } finally {
-                    submitBtn.disabled = false;
-                    submitBtn.innerHTML = '🚀 Kirim Pesanan Sekarang';
-                }
-            });
-        }
-    },
-
-    createFallbackOrderData(payload) {
-        const randStr = Math.random().toString(36).substring(2, 6).toUpperCase();
-        const dateStr = new Date().toISOString().slice(0, 10).replace(/-/g, '');
-        const nomor_pesanan = `ORD-${dateStr}-${randStr}`;
-        const total = (parseInt(payload.jumlah_galon, 10) || 1) * (parseFloat(payload.harga_satuan) || 5000);
-        const isAmbil = parseFloat(payload.harga_satuan) === 5000;
-        const layananLabel = isAmbil ? '🏪 Ambil Sendiri di Depot' : '🚚 Pesan Antar ke Alamat';
-        const jenisLabel = payload.jenis_galon === 'isi_ulang' ? 'Isi Ulang Air' : 'Galon Baru';
-
-        const wa_text = "Halo Salam Water, saya mau konfirmasi pesanan:\n"
-            + `No Pesanan: *${nomor_pesanan}*\n`
-            + `Nama: *${payload.nama_pelanggan}*\n`
-            + `Layanan: *${layananLabel}*\n`
-            + `Pesanan: ${payload.jumlah_galon}x ${jenisLabel} (@ ${this.formatRupiah(payload.harga_satuan)})\n`
-            + `Total: ${this.formatRupiah(total)}\n`
-            + (isAmbil ? `Info Ambil: ${payload.alamat}\n` : `Alamat Antar: ${payload.alamat}\n`)
-            + `Metode Bayar: ${payload.metode_pembayaran.toUpperCase()} (CASH)`;
-
-        const orderData = {
-            id: Date.now(),
-            nomor_pesanan: nomor_pesanan,
-            tanggal: new Date().toISOString().slice(0, 10),
-            nama: payload.nama_pelanggan,
-            nama_pelanggan: payload.nama_pelanggan,
-            no_hp: payload.no_hp,
-            alamat: payload.alamat,
-            jenis_galon: payload.jenis_galon,
-            jumlah_galon: payload.jumlah_galon,
-            harga_satuan: payload.harga_satuan,
-            total: total,
-            metode: payload.metode_pembayaran,
-            metode_pembayaran: payload.metode_pembayaran,
-            status: 'menunggu',
-            catatan: payload.catatan,
-            wa_text: wa_text
-        };
-
-        try {
-            const localOrders = JSON.parse(localStorage.getItem('salam_water_local_orders') || '[]');
-            localOrders.unshift(orderData);
-            localStorage.setItem('salam_water_local_orders', JSON.stringify(localOrders.slice(0, 30)));
-        } catch (e) {}
-
-        return orderData;
-    },
-
-    renderOrderSuccess(data, isFallback = false) {
-        this.showToast(isFallback ? 'Pesanan disiapkan! Teruskan konfirmasi via WhatsApp.' : 'Pesanan berhasil dikirim!');
-
-        const successBox = document.getElementById('box-order-success');
-        const ordNoEl = document.getElementById('success-ord-no');
-        const detailsEl = document.getElementById('success-ord-details');
-        const btnWa1 = document.getElementById('btn-wa-confirm-1');
-        const btnWa2 = document.getElementById('btn-wa-confirm-2');
-
-        if (successBox && ordNoEl && detailsEl) {
-            successBox.style.display = 'block';
-            ordNoEl.textContent = data.nomor_pesanan;
-
-            const jenisLabel = data.jenis_galon === 'isi_ulang' ? 'Isi Ulang Air' : 'Galon Baru';
-            const isAmbilSuccess = parseFloat(data.harga_satuan) === 5000;
-            const layananBadge = isAmbilSuccess
-                ? '<span class="badge" style="background:#e0e7ff; color:#3730a3; font-weight:700;">🏪 Ambil di Depot</span>'
-                : '<span class="badge" style="background:#fef3c7; color:#92400e; font-weight:700;">🚚 Pesan Antar</span>';
-            const alamatInfo = isAmbilSuccess
-                ? (data.alamat && data.alamat !== 'Ambil Sendiri di Depot' ? `Catatan: ${data.alamat}` : 'Ambil langsung di tempat')
-                : data.alamat;
-
-            detailsEl.innerHTML = `
-                <div><strong>Pemesan:</strong> ${data.nama || data.nama_pelanggan} (${data.no_hp})</div>
-                <div><strong>Layanan:</strong> ${layananBadge}</div>
-                <div><strong>Pesanan:</strong> ${data.jumlah_galon}x ${jenisLabel} (@ ${this.formatRupiah(data.harga_satuan)})</div>
-                <div><strong>Total:</strong> <span style="color:#166534; font-weight:800;">${this.formatRupiah(data.total)}</span></div>
-                <div><strong>Metode Bayar:</strong> ${(data.metode || data.metode_pembayaran || 'tunai').toUpperCase()} (CASH)</div>
-                <div><strong>${isAmbilSuccess ? 'Info Lokasi' : 'Alamat Antar'}:</strong> ${alamatInfo}</div>
-                <div style="margin-top:0.5rem; color:#64748b; font-size:0.8rem;">Status: <span class="badge badge-menunggu">🟡 Menunggu Konfirmasi</span></div>
-            `;
-
-            if (data.wa_text) {
-                const encoded = encodeURIComponent(data.wa_text);
-                if (btnWa1) {
-                    btnWa1.href = `https://wa.me/6287879996392?text=${encoded}`;
-                }
-                if (btnWa2) {
-                    btnWa2.href = `https://wa.me/6285659719922?text=${encoded}`;
-                }
-            }
-
-            successBox.scrollIntoView({ behavior: 'smooth' });
-        }
-
-        // Reset formulir
-        const catatanEl = document.getElementById('order-catatan');
-        const jumlahEl = document.getElementById('order-jumlah');
-        if (catatanEl) catatanEl.value = '';
-        if (jumlahEl) jumlahEl.value = '1';
-        this.calculateOrderTotal();
-
-        // Jika sedang login admin, refresh antrean
-        if (this.state.auth.isAdmin) {
-            this.loadAdminOrders();
-        }
-    },
-
-    // ==========================================================
-    // LACAK STATUS PESANAN (PUBLIK)
-    // ==========================================================
-    initOrderTracking() {
-        const form = document.getElementById('form-lacak-pesanan');
-        if (!form) return;
-
-        form.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const query = document.getElementById('lacak-input-key').value.trim();
-            const container = document.getElementById('lacak-hasil-container');
-            if (!query || !container) return;
-
-            container.innerHTML = '<div class="card"><div class="card-body" style="text-align:center; padding:2rem;">Mencari riwayat pesanan...</div></div>';
-
-            try {
-                const res = await fetch(`api/pesanan.php?no_hp=${encodeURIComponent(query)}`);
-                const result = await res.json();
-
-                if (result.success && Array.isArray(result.data) && result.data.length > 0) {
-                    container.innerHTML = result.data.map(order => {
-                        let badgeStatus = '<span class="badge badge-menunggu">🟡 Menunggu Diproses</span>';
-                        if (order.status === 'diproses') badgeStatus = '<span class="badge badge-diproses">⚙️ Sedang Diproses</span>';
-                        if (order.status === 'selesai') badgeStatus = '<span class="badge badge-selesai">🟢 Selesai</span>';
-                        if (order.status === 'dibatalkan') badgeStatus = '<span class="badge badge-dibatalkan">🔴 Dibatalkan</span>';
-
-                        const jenis = order.jenis_galon === 'isi_ulang' ? '💧 Isi Ulang Air' : '🪣 Galon Baru';
-                        const isAmbil = parseFloat(order.harga_satuan) === 5000;
-                        const layananBadge = isAmbil
-                            ? '<span class="badge" style="background:#e0e7ff; color:#3730a3; font-weight:700;">🏪 Ambil di Depot</span>'
-                            : '<span class="badge" style="background:#fef3c7; color:#92400e; font-weight:700;">🚚 Pesan Antar</span>';
-                        const alamatInfo = isAmbil
-                            ? (order.alamat && order.alamat !== 'Ambil Sendiri di Depot' ? `Catatan: ${order.alamat}` : 'Ambil langsung di depot')
-                            : order.alamat;
-
-                        return `
-                            <div class="card" style="margin-bottom: 1rem;">
-                                <div class="card-header">
-                                    <h3 class="card-title">📦 ${order.nomor_pesanan}</h3>
-                                    ${badgeStatus}
-                                </div>
-                                <div class="card-body">
-                                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 0.75rem; font-size: 0.9rem;">
-                                        <div><strong>Tanggal:</strong> ${this.formatTanggal(order.tanggal)}</div>
-                                        <div><strong>Pemesan:</strong> ${order.nama_pelanggan} (${order.no_hp})</div>
-                                        <div><strong>Layanan:</strong> ${layananBadge}</div>
-                                        <div><strong>Pesanan:</strong> ${order.jumlah_galon}x ${jenis} (@ ${this.formatRupiah(order.harga_satuan)})</div>
-                                        <div><strong>Total Biaya:</strong> <strong style="color:var(--primary); font-size:1.05rem;">${this.formatRupiah(order.total)}</strong> (${order.metode_pembayaran.toUpperCase()})</div>
-                                        <div style="grid-column: 1 / -1;"><strong>${isAmbil ? 'Info Lokasi' : 'Alamat Antar'}:</strong> ${alamatInfo}</div>
-                                        ${order.catatan ? `<div style="grid-column: 1 / -1; color:var(--text-muted);"><strong>Catatan:</strong> ${order.catatan}</div>` : ''}
-                                    </div>
-                                </div>
-                            </div>
-                        `;
-                    }).join('');
-                } else {
-                    const localOrders = this.getLocalTrackingOrders(query);
-                    if (localOrders.length > 0) {
-                        this.renderTrackingOrders(container, localOrders);
-                    } else {
-                        container.innerHTML = `
-                            <div class="card">
-                                <div class="card-body" style="text-align:center; padding: 2.5rem 1rem; color: #64748b;">
-                                    Tidak ditemukan pesanan dengan nomor WhatsApp / Nomor Pesanan "<strong>${query}</strong>". Pastikan nomor yang dimasukkan sesuai saat memesan.
-                                </div>
-                            </div>
-                        `;
+                    if (submitBtn) {
+                        submitBtn.disabled = false;
+                        submitBtn.innerHTML = '💾 Simpan Pesanan ke Antrean';
                     }
                 }
-            } catch (err) {
-                const localOrders = this.getLocalTrackingOrders(query);
-                if (localOrders.length > 0) {
-                    this.renderTrackingOrders(container, localOrders);
-                } else {
-                    container.innerHTML = '<div class="card"><div class="card-body" style="text-align:center; color:#ef4444; padding:2rem;">Gagal melacak pesanan dari server. Coba lagi beberapa saat.</div></div>';
-                }
-            }
-        });
-    },
-
-    getLocalTrackingOrders(query) {
-        try {
-            const localOrders = JSON.parse(localStorage.getItem('salam_water_local_orders') || '[]');
-            const cleanQ = query.replace(/\D/g, '');
-            return localOrders.filter(o => {
-                const cleanHp = (o.no_hp || '').replace(/\D/g, '');
-                const matchHp = cleanQ && (cleanHp.includes(cleanQ) || cleanQ.includes(cleanHp));
-                const matchNo = (o.nomor_pesanan || '').toLowerCase().includes(query.toLowerCase());
-                return matchHp || matchNo;
             });
-        } catch (e) {
-            return [];
         }
-    },
-
-    renderTrackingOrders(container, orders) {
-        container.innerHTML = orders.map(order => {
-            let badgeStatus = '<span class="badge badge-menunggu">🟡 Menunggu Diproses</span>';
-            if (order.status === 'diproses') badgeStatus = '<span class="badge badge-diproses">⚙️ Sedang Diproses</span>';
-            if (order.status === 'selesai') badgeStatus = '<span class="badge badge-selesai">🟢 Selesai</span>';
-            if (order.status === 'dibatalkan') badgeStatus = '<span class="badge badge-dibatalkan">🔴 Dibatalkan</span>';
-
-            const jenis = order.jenis_galon === 'isi_ulang' ? '💧 Isi Ulang Air' : '🪣 Galon Baru';
-            const isAmbil = parseFloat(order.harga_satuan) === 5000;
-            const layananBadge = isAmbil
-                ? '<span class="badge" style="background:#e0e7ff; color:#3730a3; font-weight:700;">🏪 Ambil di Depot</span>'
-                : '<span class="badge" style="background:#fef3c7; color:#92400e; font-weight:700;">🚚 Pesan Antar</span>';
-            const alamatInfo = isAmbil
-                ? (order.alamat && order.alamat !== 'Ambil Sendiri di Depot' ? `Catatan: ${order.alamat}` : 'Ambil langsung di depot')
-                : order.alamat;
-
-            return `
-                <div class="card" style="margin-bottom: 1rem;">
-                    <div class="card-header">
-                        <h3 class="card-title">📦 ${order.nomor_pesanan}</h3>
-                        ${badgeStatus}
-                    </div>
-                    <div class="card-body">
-                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 0.75rem; font-size: 0.9rem;">
-                            <div><strong>Tanggal:</strong> ${this.formatTanggal(order.tanggal)}</div>
-                            <div><strong>Pemesan:</strong> ${order.nama_pelanggan} (${order.no_hp})</div>
-                            <div><strong>Layanan:</strong> ${layananBadge}</div>
-                            <div><strong>Pesanan:</strong> ${order.jumlah_galon}x ${jenis} (@ ${this.formatRupiah(order.harga_satuan)})</div>
-                            <div><strong>Total Biaya:</strong> <strong style="color:var(--primary); font-size:1.05rem;">${this.formatRupiah(order.total)}</strong> (${order.metode_pembayaran.toUpperCase()})</div>
-                            <div style="grid-column: 1 / -1;"><strong>${isAmbil ? 'Info Lokasi' : 'Alamat Antar'}:</strong> ${alamatInfo}</div>
-                            ${order.catatan ? `<div style="grid-column: 1 / -1; color:var(--text-muted);"><strong>Catatan:</strong> ${order.catatan}</div>` : ''}
-                        </div>
-                    </div>
-                </div>
-            `;
-        }).join('');
     },
 
     // ==========================================================
