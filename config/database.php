@@ -52,8 +52,20 @@ function get_db_connection()
         PDO::MYSQL_ATTR_INIT_COMMAND => "SET NAMES utf8mb4"
     ];
 
-    // Aktifkan mode SSL jika menggunakan cloud provider (TiDB, Aiven, dll)
-    if ($db_ssl === 'true' || $db_ssl === '1' || (int)$db_port === 4000) {
+    // Aktifkan mode SSL/TLS jika menggunakan cloud provider (TiDB Cloud, Aiven, dll)
+    // TiDB Serverless mewajibkan koneksi terenkripsi (TLS)
+    $is_cloud = ($db_ssl === 'true' || $db_ssl === '1' || (int)$db_port === 4000 || strpos($db_host, 'tidbcloud.com') !== false || strpos($db_host, 'aivencloud.com') !== false);
+
+    if ($is_cloud) {
+        $ca_file = __DIR__ . '/cacert.pem';
+        if (file_exists($ca_file)) {
+            $options[PDO::MYSQL_ATTR_SSL_CA] = $ca_file;
+        } elseif (file_exists('/etc/pki/tls/certs/ca-bundle.crt')) {
+            $options[PDO::MYSQL_ATTR_SSL_CA] = '/etc/pki/tls/certs/ca-bundle.crt';
+        } elseif (file_exists('/etc/ssl/certs/ca-certificates.crt')) {
+            $options[PDO::MYSQL_ATTR_SSL_CA] = '/etc/ssl/certs/ca-certificates.crt';
+        }
+
         $options[PDO::MYSQL_ATTR_SSL_VERIFY_SERVER_CERT] = false;
     }
 
