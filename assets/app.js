@@ -1,6 +1,7 @@
 /**
  * SALAM WATER - JAVASCRIPT CONTROLLER (VANILLA JS)
- * Fitur: AJAX Fetch API, Realtime Calculation, Responsive Tabs, Print Ready
+ * Fitur: Portal Pemesanan Publik, Lacak Pesanan, Sesi Admin,
+ *        Manajemen Pesanan Masuk, Transaksi Kasir, Laporan Finansial & Print
  * File: assets/app.js
  */
 
@@ -11,9 +12,18 @@ document.addEventListener('DOMContentLoaded', () => {
 const App = {
     // State aplikasi
     state: {
-        currentTab: 'dashboard',
+        currentTab: 'pesan',
+        auth: {
+            isAdmin: false,
+            token: null,
+            username: ''
+        },
+        orderProduct: {
+            jenis: 'isi_ulang',
+            harga: 5000
+        },
         categories: [],
-        filterPeriod: 'bulan_ini',
+        adminOrderStatusFilter: '',
         reportStartDate: '',
         reportEndDate: ''
     },
@@ -21,19 +31,17 @@ const App = {
     // Inisialisasi awal
     init() {
         this.initDates();
+        this.initAuth();
         this.initTabs();
         this.initLiveClock();
+        this.initPublicOrderForm();
+        this.initOrderTracking();
+        this.initAdminOrderFilters();
         this.initSalesCalculations();
         this.initExpenseForm();
         this.initReportFilters();
         this.initPresets();
-        
-        // Muat data awal
-        this.loadCategories();
-        this.loadDashboardData();
-        this.loadPenjualanList();
-        this.loadPengeluaranList();
-        this.loadLaporanData();
+        this.initLoginModal();
     },
 
     // Format Rupiah (IDR)
@@ -76,7 +84,6 @@ const App = {
         this.state.reportStartDate = firstDayMonthStr;
         this.state.reportEndDate = todayStr;
 
-        // Pasang tanggal hari ini pada input tanggal form
         const inputTglJual = document.getElementById('penjualan-tanggal');
         const inputTglKeluar = document.getElementById('pengeluaran-tanggal');
         const filterStart = document.getElementById('filter-start-date');
@@ -109,7 +116,193 @@ const App = {
         setInterval(updateTime, 60000);
     },
 
-    // Navigasi Tab
+    // ==========================================================
+    // AUTENTIKASI & SESI ADMIN
+    // ==========================================================
+    async initAuth() {
+        const savedToken = sessionStorage.getItem('salam_water_admin_token');
+        if (savedToken) {
+            try {
+                const res = await fetch('api/auth.php?action=check', {
+                    headers: { 'Authorization': `Bearer ${savedToken}` }
+                });
+                const result = await res.json();
+                if (result.success && result.data && result.data.is_admin) {
+                    this.setAdminState(true, savedToken, result.data.username);
+                    return;
+                }
+            } catch (e) {
+                console.warn('Gagal verifikasi token tersimpan:', e);
+            }
+        }
+        this.setAdminState(false, null);
+    },
+
+    setAdminState(isAdmin, token, username = 'adminwater') {
+        this.state.auth.isAdmin = isAdmin;
+        this.state.auth.token = token;
+        this.state.auth.username = username;
+
+        const body = document.body;
+        if (isAdmin) {
+            body.classList.remove('role-guest');
+            body.classList.add('role-admin');
+            
+            // Muat data khusus admin
+            this.loadCategories();
+            this.loadAdminOrders();
+            this.loadDashboardData();
+            this.loadPenjualanList();
+            this.loadPengeluaranList();
+            this.loadLaporanData();
+        } else {
+            body.classList.remove('role-admin');
+            body.classList.add('role-guest');
+
+            // Jika sedang berada di tab admin, kembalikan ke tab pesan
+            const adminTabs = ['antrean', 'dashboard', 'penjualan', 'pengeluaran', 'laporan'];
+            if (adminTabs.includes(this.state.currentTab)) {
+                this.switchTab('pesan');
+            }
+        }
+    },
+
+    // Helper Fetch yang menyertakan Authorization Bearer Token
+    async authFetch(url, options = {}) {
+        const headers = options.headers || {};
+        if (this.state.auth.token) {
+            headers['Authorization'] = `Bearer ${this.state.auth.token}`;
+        }
+        if (!headers['Content-Type'] && options.body && typeof options.body === 'string') {
+            headers['Content-Type'] = 'application/json';
+        }
+        options.headers = headers;
+
+        const res = await fetch(url, options);
+        if (res.status === 401) {
+            this.setAdminState(false, null);
+            sessionStorage.removeItem('salam_water_admin_token');
+            this.showToast('Sesi admin berakhir. Silakan login kembali.', 'error');
+            throw new Error('Unauthorized');
+        }
+        return res;
+    },
+
+    // Inisialisasi Autentikasi UI (Tab Login Dedikasi)
+    initLoginModal() {
+        const btnOpen = document.getElementById('btn-open-login');
+        const btnLogout = document.getElementById('btn-logout');
+
+        // Form Login Tab
+        const formTab = document.getElementById('form-login-tab');
+        const tabAlert = document.getElementById('login-alert-tab');
+        const tabSubmitBtn = document.getElementById('btn-submit-login-tab');
+        const tabPass = document.getElementById('login-tab-password');
+        const tabUser = document.getElementById('login-tab-username');
+        const btnToggleTabPass = document.getElementById('btn-toggle-tab-pass');
+
+        // Klik tombol Login di Header -> Pindah ke Tab Login
+        if (btnOpen) {
+            btnOpen.addEventListener('click', () => {
+                this.switchTab('login');
+                if (tabPass && !tabPass.value) {
+                    tabPass.focus();
+                } else if (tabUser) {
+                    tabUser.focus();
+                }
+            });
+        }
+
+        // Toggle intip password
+        if (btnToggleTabPass && tabPass) {
+            btnToggleTabPass.addEventListener('click', () => {
+                const isPass = tabPass.type === 'password';
+                tabPass.type = isPass ? 'text' : 'password';
+                btnToggleTabPass.textContent = isPass ? '🙈' : '👁️';
+            });
+        }
+
+        // Submit Form Login
+        if (formTab) {
+            formTab.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const username = tabUser.value.trim();
+                const password = tabPass.value;
+
+                if (!username || !password) {
+                    if (tabAlert) {
+                        tabAlert.style.display = 'block';
+                        tabAlert.style.background = '#fee2e2';
+                        tabAlert.style.color = '#991b1b';
+                        tabAlert.style.border = '1px solid #fecaca';
+                        tabAlert.textContent = 'Username dan password admin wajib diisi!';
+                    }
+                    return;
+                }
+
+                if (tabSubmitBtn) {
+                    tabSubmitBtn.disabled = true;
+                    tabSubmitBtn.innerHTML = '⏳ Memverifikasi...';
+                }
+                if (tabAlert) tabAlert.style.display = 'none';
+
+                try {
+                    const res = await fetch('api/auth.php?action=login', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ username, password })
+                    });
+                    const result = await res.json();
+
+                    if (result.success && result.data && result.data.token) {
+                        sessionStorage.setItem('salam_water_admin_token', result.data.token);
+                        this.setAdminState(true, result.data.token, result.data.username);
+                        tabPass.value = '';
+                        this.showToast('Login Admin berhasil! Selamat datang, ' + result.data.username);
+                        this.switchTab('antrean');
+                    } else {
+                        if (tabAlert) {
+                            tabAlert.style.display = 'block';
+                            tabAlert.style.background = '#fee2e2';
+                            tabAlert.style.color = '#991b1b';
+                            tabAlert.style.border = '1px solid #fecaca';
+                            tabAlert.textContent = result.message || 'Username atau password salah.';
+                        }
+                    }
+                } catch (err) {
+                    if (tabAlert) {
+                        tabAlert.style.display = 'block';
+                        tabAlert.style.background = '#fee2e2';
+                        tabAlert.style.color = '#991b1b';
+                        tabAlert.textContent = 'Gagal terhubung ke server autentikasi.';
+                    }
+                } finally {
+                    if (tabSubmitBtn) {
+                        tabSubmitBtn.disabled = false;
+                        tabSubmitBtn.innerHTML = '🚀 Masuk ke Panel Admin';
+                    }
+                }
+            });
+        }
+
+        // Tombol Logout Admin
+        if (btnLogout) {
+            btnLogout.addEventListener('click', async () => {
+                if (!confirm('Apakah Anda yakin ingin keluar dari akun Admin?')) return;
+                try {
+                    await fetch('api/auth.php?action=logout', { method: 'POST' });
+                } catch (e) {}
+                sessionStorage.removeItem('salam_water_admin_token');
+                this.setAdminState(false, null);
+                this.switchTab('pesan');
+                this.showToast('Anda telah keluar dari mode admin.');
+            });
+        }
+    },
+
+    // ==========================================================
+    // NAVIGASI TABS
+    // ==========================================================
     initTabs() {
         const tabButtons = document.querySelectorAll('.nav-btn');
         tabButtons.forEach(btn => {
@@ -132,20 +325,20 @@ const App = {
         });
 
         // Trigger refresh data saat tab dibuka
-        if (tabId === 'dashboard') {
+        if (tabId === 'antrean' && this.state.auth.isAdmin) {
+            this.loadAdminOrders();
+        } else if (tabId === 'dashboard' && this.state.auth.isAdmin) {
             this.loadDashboardData();
-        } else if (tabId === 'penjualan') {
+        } else if (tabId === 'penjualan' && this.state.auth.isAdmin) {
             this.loadPenjualanList();
-        } else if (tabId === 'pengeluaran') {
+        } else if (tabId === 'pengeluaran' && this.state.auth.isAdmin) {
             this.loadPengeluaranList();
-        } else if (tabId === 'laporan') {
+        } else if (tabId === 'laporan' && this.state.auth.isAdmin) {
             this.loadLaporanData();
         }
     },
 
-    // ==========================================================
-    // NOTIFIKASI TOAST
-    // ==========================================================
+    // Notifikasi Toast Pop-up
     showToast(message, type = 'success') {
         let container = document.querySelector('.toast-container');
         if (!container) {
@@ -170,27 +363,445 @@ const App = {
     },
 
     // ==========================================================
-    // LOAD KATEGORI DARI API
+    // PORTAL PEMESANAN PUBLIK (TAMU TANPA LOGIN)
     // ==========================================================
-    async loadCategories() {
-        try {
-            const res = await fetch('api/transaksi.php?type=kategori');
-            const result = await res.json();
-            if (result.success && Array.isArray(result.data)) {
-                this.state.categories = result.data;
-                const selectEl = document.getElementById('pengeluaran-kategori');
-                if (selectEl) {
-                    selectEl.innerHTML = '<option value="">-- Pilih Kategori --</option>' + 
-                        result.data.map(cat => `<option value="${cat.id}">${cat.nama_kategori}</option>`).join('');
+    initPublicOrderForm() {
+        const form = document.getElementById('form-pesan-online');
+        const qtyInput = document.getElementById('order-jumlah');
+        const totalDisplay = document.getElementById('order-total-display');
+        const radioCards = document.querySelectorAll('.product-radio-card');
+
+        const calculateOrderTotal = () => {
+            const qty = parseInt(qtyInput.value, 10) || 1;
+            const price = this.state.orderProduct.harga;
+            const total = qty * price;
+            if (totalDisplay) {
+                totalDisplay.textContent = this.formatRupiah(total);
+            }
+        };
+
+        const updateAddressMode = (price) => {
+            const labelEl = document.getElementById('label-order-alamat');
+            const textareaEl = document.getElementById('order-alamat');
+            const helperEl = document.getElementById('helper-order-alamat');
+            if (!textareaEl) return;
+
+            if (parseFloat(price) === 5000) {
+                if (labelEl) labelEl.innerHTML = '🏪 Catatan Pengambilan / Info Tambahan <small style="font-weight:400; color:var(--text-muted);">(Opsional - Ambil di Depot)</small>';
+                textareaEl.placeholder = 'Bisa dikosongkan (ambil sendiri di depot) atau isi estimasi jam pengambilan';
+                textareaEl.required = false;
+                if (helperEl) {
+                    helperEl.textContent = 'Karena Anda memilih tarif Rp 5.000, pesanan diambil sendiri di depot tanpa pengantaran.';
+                    helperEl.style.color = '#4338ca';
+                }
+            } else {
+                if (labelEl) labelEl.innerHTML = '🚚 Alamat Lengkap Pengantaran <span style="color:#ef4444;">*</span> <small style="font-weight:400; color:var(--text-muted);">(Pesan Antar)</small>';
+                textareaEl.placeholder = 'Contoh: Jl. Melati No. 12 RT 03/05 (Rumah pagar hitam sebelah warung)';
+                textareaEl.required = true;
+                if (helperEl) {
+                    helperEl.textContent = 'Pesanan akan diproses dan diantar langsung oleh kurir depot ke alamat Anda.';
+                    helperEl.style.color = 'var(--text-muted)';
                 }
             }
-        } catch (err) {
-            console.error('Gagal mengambil kategori:', err);
+        };
+
+        // Radio Card Selection
+        radioCards.forEach(card => {
+            card.addEventListener('click', () => {
+                radioCards.forEach(c => c.classList.remove('active'));
+                card.classList.add('active');
+
+                this.state.orderProduct.jenis = card.dataset.jenis;
+                this.state.orderProduct.harga = parseFloat(card.dataset.harga);
+                calculateOrderTotal();
+                updateAddressMode(this.state.orderProduct.harga);
+            });
+        });
+
+        // Inisialisasi mode alamat awal
+        updateAddressMode(this.state.orderProduct.harga || 5000);
+
+        // Quantity input & preset buttons
+        if (qtyInput) qtyInput.addEventListener('input', calculateOrderTotal);
+
+        document.querySelectorAll('.btn-preset-order-qty').forEach(btn => {
+            btn.addEventListener('click', () => {
+                qtyInput.value = btn.dataset.qty;
+                calculateOrderTotal();
+            });
+        });
+
+        // Submit Pesanan Pelanggan
+        if (form) {
+            form.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const submitBtn = document.getElementById('btn-submit-order');
+                submitBtn.disabled = true;
+                submitBtn.innerHTML = '⏳ Mengirim Pesanan...';
+
+                let alamatVal = document.getElementById('order-alamat').value.trim();
+                const isAmbilDepot = parseFloat(this.state.orderProduct.harga) === 5000;
+                if (!alamatVal && isAmbilDepot) {
+                    alamatVal = 'Ambil Sendiri di Depot';
+                }
+
+                const payload = {
+                    nama_pelanggan: document.getElementById('order-nama').value.trim(),
+                    no_hp: document.getElementById('order-nohp').value.trim(),
+                    alamat: alamatVal,
+                    jenis_galon: this.state.orderProduct.jenis,
+                    harga_satuan: this.state.orderProduct.harga,
+                    jumlah_galon: parseInt(document.getElementById('order-jumlah').value, 10),
+                    metode_pembayaran: document.getElementById('order-metode').value,
+                    catatan: document.getElementById('order-catatan').value.trim()
+                };
+
+                try {
+                    const res = await fetch('api/pesanan.php', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    });
+                    const result = await res.json();
+
+                    if (result.success && result.data) {
+                        this.showToast('Pesanan berhasil dikirim!');
+                        
+                        // Tampilkan box sukses
+                        const successBox = document.getElementById('box-order-success');
+                        const ordNoEl = document.getElementById('success-ord-no');
+                        const detailsEl = document.getElementById('success-ord-details');
+                        const btnWa1 = document.getElementById('btn-wa-confirm-1');
+                        const btnWa2 = document.getElementById('btn-wa-confirm-2');
+
+                        if (successBox && ordNoEl && detailsEl) {
+                            successBox.style.display = 'block';
+                            ordNoEl.textContent = result.data.nomor_pesanan;
+                            
+                            const jenisLabel = result.data.jenis_galon === 'isi_ulang' ? 'Isi Ulang Air' : 'Galon Baru';
+                            const isAmbilSuccess = parseFloat(result.data.harga_satuan) === 5000;
+                            const layananBadge = isAmbilSuccess
+                                ? '<span class="badge" style="background:#e0e7ff; color:#3730a3; font-weight:700;">🏪 Ambil di Depot</span>'
+                                : '<span class="badge" style="background:#fef3c7; color:#92400e; font-weight:700;">🚚 Pesan Antar</span>';
+                            const alamatInfo = isAmbilSuccess
+                                ? (result.data.alamat && result.data.alamat !== 'Ambil Sendiri di Depot' ? `Catatan: ${result.data.alamat}` : 'Ambil langsung di tempat')
+                                : result.data.alamat;
+
+                            detailsEl.innerHTML = `
+                                <div><strong>Pemesan:</strong> ${result.data.nama} (${result.data.no_hp})</div>
+                                <div><strong>Layanan:</strong> ${layananBadge}</div>
+                                <div><strong>Pesanan:</strong> ${result.data.jumlah_galon}x ${jenisLabel} (@ ${this.formatRupiah(result.data.harga_satuan)})</div>
+                                <div><strong>Total:</strong> <span style="color:#166534; font-weight:800;">${this.formatRupiah(result.data.total)}</span></div>
+                                <div><strong>Metode Bayar:</strong> ${result.data.metode.toUpperCase()} (CASH)</div>
+                                <div><strong>${isAmbilSuccess ? 'Info Lokasi' : 'Alamat Antar'}:</strong> ${alamatInfo}</div>
+                                <div style="margin-top:0.5rem; color:#64748b; font-size:0.8rem;">Status: <span class="badge badge-menunggu">🟡 Menunggu Konfirmasi</span></div>
+                            `;
+
+                            if (result.data.wa_text) {
+                                const encoded = encodeURIComponent(result.data.wa_text);
+                                if (btnWa1) {
+                                    btnWa1.href = `https://wa.me/6287879996392?text=${encoded}`;
+                                }
+                                if (btnWa2) {
+                                    btnWa2.href = `https://wa.me/6285659719922?text=${encoded}`;
+                                }
+                            }
+
+                            successBox.scrollIntoView({ behavior: 'smooth' });
+                        }
+
+                        // Reset formulir
+                        document.getElementById('order-catatan').value = '';
+                        document.getElementById('order-jumlah').value = '1';
+                        calculateOrderTotal();
+
+                        // Jika sedang login admin, refresh antrean
+                        if (this.state.auth.isAdmin) {
+                            this.loadAdminOrders();
+                        }
+                    } else {
+                        this.showToast(result.message || 'Gagal mengirim pesanan.', 'error');
+                    }
+                } catch (err) {
+                    this.showToast('Terjadi kesalahan jaringan saat mengirim pesanan.', 'error');
+                } finally {
+                    submitBtn.disabled = false;
+                    submitBtn.innerHTML = '🚀 Kirim Pesanan Sekarang';
+                }
+            });
         }
     },
 
     // ==========================================================
-    // FORM PENJUALAN & KALKULASI REALTIME
+    // LACAK STATUS PESANAN (PUBLIK)
+    // ==========================================================
+    initOrderTracking() {
+        const form = document.getElementById('form-lacak-pesanan');
+        if (!form) return;
+
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const query = document.getElementById('lacak-input-key').value.trim();
+            const container = document.getElementById('lacak-hasil-container');
+            if (!query || !container) return;
+
+            container.innerHTML = '<div class="card"><div class="card-body" style="text-align:center; padding:2rem;">Mencari riwayat pesanan...</div></div>';
+
+            try {
+                const res = await fetch(`api/pesanan.php?no_hp=${encodeURIComponent(query)}`);
+                const result = await res.json();
+
+                if (result.success && Array.isArray(result.data) && result.data.length > 0) {
+                    container.innerHTML = result.data.map(order => {
+                        let badgeStatus = '<span class="badge badge-menunggu">🟡 Menunggu Diproses</span>';
+                        if (order.status === 'diproses') badgeStatus = '<span class="badge badge-diproses">⚙️ Sedang Diproses</span>';
+                        if (order.status === 'selesai') badgeStatus = '<span class="badge badge-selesai">🟢 Selesai</span>';
+                        if (order.status === 'dibatalkan') badgeStatus = '<span class="badge badge-dibatalkan">🔴 Dibatalkan</span>';
+
+                        const jenis = order.jenis_galon === 'isi_ulang' ? '💧 Isi Ulang Air' : '🪣 Galon Baru';
+                        const isAmbil = parseFloat(order.harga_satuan) === 5000;
+                        const layananBadge = isAmbil
+                            ? '<span class="badge" style="background:#e0e7ff; color:#3730a3; font-weight:700;">🏪 Ambil di Depot</span>'
+                            : '<span class="badge" style="background:#fef3c7; color:#92400e; font-weight:700;">🚚 Pesan Antar</span>';
+                        const alamatInfo = isAmbil
+                            ? (order.alamat && order.alamat !== 'Ambil Sendiri di Depot' ? `Catatan: ${order.alamat}` : 'Ambil langsung di depot')
+                            : order.alamat;
+
+                        return `
+                            <div class="card" style="margin-bottom: 1rem;">
+                                <div class="card-header">
+                                    <h3 class="card-title">📦 ${order.nomor_pesanan}</h3>
+                                    ${badgeStatus}
+                                </div>
+                                <div class="card-body">
+                                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 0.75rem; font-size: 0.9rem;">
+                                        <div><strong>Tanggal:</strong> ${this.formatTanggal(order.tanggal)}</div>
+                                        <div><strong>Pemesan:</strong> ${order.nama_pelanggan} (${order.no_hp})</div>
+                                        <div><strong>Layanan:</strong> ${layananBadge}</div>
+                                        <div><strong>Pesanan:</strong> ${order.jumlah_galon}x ${jenis} (@ ${this.formatRupiah(order.harga_satuan)})</div>
+                                        <div><strong>Total Biaya:</strong> <strong style="color:var(--primary); font-size:1.05rem;">${this.formatRupiah(order.total)}</strong> (${order.metode_pembayaran.toUpperCase()})</div>
+                                        <div style="grid-column: 1 / -1;"><strong>${isAmbil ? 'Info Lokasi' : 'Alamat Antar'}:</strong> ${alamatInfo}</div>
+                                        ${order.catatan ? `<div style="grid-column: 1 / -1; color:var(--text-muted);"><strong>Catatan:</strong> ${order.catatan}</div>` : ''}
+                                    </div>
+                                </div>
+                            </div>
+                        `;
+                    }).join('');
+                } else {
+                    container.innerHTML = `
+                        <div class="card">
+                            <div class="card-body" style="text-align:center; padding: 2.5rem 1rem; color: #64748b;">
+                                Tidak ditemukan pesanan dengan nomor WhatsApp / Nomor Pesanan "<strong>${query}</strong>". Pastikan nomor yang dimasukkan sesuai saat memesan.
+                            </div>
+                        </div>
+                    `;
+                }
+            } catch (err) {
+                container.innerHTML = '<div class="card"><div class="card-body" style="text-align:center; color:#ef4444; padding:2rem;">Gagal melacak pesanan. Coba lagi beberapa saat.</div></div>';
+            }
+        });
+    },
+
+    // ==========================================================
+    // KELOLA PESANAN MASUK (KHUSUS ADMIN)
+    // ==========================================================
+    initAdminOrderFilters() {
+        const pills = document.querySelectorAll('#order-status-filters .period-pill');
+        pills.forEach(pill => {
+            pill.addEventListener('click', () => {
+                pills.forEach(p => p.classList.remove('active'));
+                pill.classList.add('active');
+                this.state.adminOrderStatusFilter = pill.dataset.status;
+                this.loadAdminOrders();
+            });
+        });
+    },
+
+    async loadAdminOrders() {
+        if (!this.state.auth.isAdmin) return;
+        const tbody = document.getElementById('tbody-antrean-orders');
+        const badgeCount = document.getElementById('badge-pending-count');
+        if (!tbody) return;
+
+        tbody.innerHTML = '<tr><td colspan="9" style="text-align:center; padding: 2rem;">Memuat daftar pesanan masuk...</td></tr>';
+
+        try {
+            const statusParam = this.state.adminOrderStatusFilter ? `&status=${this.state.adminOrderStatusFilter}` : '';
+            const res = await this.authFetch(`api/pesanan.php?all=1${statusParam}`);
+            const result = await res.json();
+
+            if (result.success && result.data) {
+                const { orders, stats } = result.data;
+
+                // Update Counter Menunggu di Nav Tab
+                if (badgeCount && stats) {
+                    const pending = parseInt(stats.pending_count, 10) || 0;
+                    badgeCount.textContent = pending;
+                    badgeCount.style.display = pending > 0 ? 'inline-block' : 'none';
+                }
+
+                if (Array.isArray(orders) && orders.length > 0) {
+                    tbody.innerHTML = orders.map(item => {
+                        let badgeStatus = '<span class="badge badge-menunggu">🟡 Menunggu</span>';
+                        if (item.status === 'diproses') badgeStatus = '<span class="badge badge-diproses">⚙️ Sedang Diproses</span>';
+                        if (item.status === 'selesai') badgeStatus = '<span class="badge badge-selesai">🟢 Selesai</span>';
+                        if (item.status === 'dibatalkan') badgeStatus = '<span class="badge badge-dibatalkan">🔴 Batal</span>';
+
+                        const jenis = item.jenis_galon === 'isi_ulang' ? '💧 Isi Ulang' : '🪣 Galon Baru';
+                        const isAmbil = parseFloat(item.harga_satuan) === 5000;
+                        const cleanPhone = item.no_hp.replace(/\D/g, '');
+                        const waLink = `https://wa.me/${cleanPhone}?text=${encodeURIComponent(`Halo Kak ${item.nama_pelanggan}, dari Depot Salam Water terkait pesanan #${item.nomor_pesanan}`)}`;
+
+                        // Action Buttons
+                        let actions = '';
+                        if (item.status === 'menunggu') {
+                            actions = `
+                                <div style="display:flex; gap:0.3rem; align-items:center;">
+                                    <button class="btn btn-sm btn-primary" onclick="App.updateOrderStatus(${item.id}, 'diproses', '${item.nomor_pesanan}')" title="Mulai Proses Pesanan">
+                                        ⚙️ Proses
+                                    </button>
+                                    <button class="btn btn-sm btn-secondary" onclick="App.updateOrderStatus(${item.id}, 'dibatalkan', '${item.nomor_pesanan}')" title="Batalkan Pesanan">
+                                        ❌ Batal
+                                    </button>
+                                    <button class="btn btn-sm btn-danger-outline" onclick="App.deleteOrder(${item.id}, '${item.nomor_pesanan}')" title="Hapus Pesanan">
+                                        🗑️ Hapus
+                                    </button>
+                                </div>
+                            `;
+                        } else if (item.status === 'diproses') {
+                            actions = `
+                                <div style="display:flex; gap:0.3rem; align-items:center;">
+                                    <button class="btn btn-sm btn-success" onclick="App.updateOrderStatus(${item.id}, 'selesai', '${item.nomor_pesanan}')" title="Selesaikan & Masukkan ke Buku Kas">
+                                        ✅ Selesai
+                                    </button>
+                                    <button class="btn btn-sm btn-secondary" onclick="App.updateOrderStatus(${item.id}, 'dibatalkan', '${item.nomor_pesanan}')" title="Batalkan Pesanan">
+                                        ❌ Batal
+                                    </button>
+                                    <button class="btn btn-sm btn-danger-outline" onclick="App.deleteOrder(${item.id}, '${item.nomor_pesanan}')" title="Hapus Pesanan">
+                                        🗑️ Hapus
+                                    </button>
+                                </div>
+                            `;
+                        } else if (item.status === 'selesai') {
+                            actions = `
+                                <div style="display:flex; gap:0.4rem; align-items:center;">
+                                    <span style="color:var(--success-dark); font-size:0.8rem; font-weight:700;">✔️ Masuk Buku Kas</span>
+                                    <button class="btn btn-sm btn-danger-outline" onclick="App.deleteOrder(${item.id}, '${item.nomor_pesanan}')" title="Hapus Pesanan & Catatan Kas Terkait">
+                                        🗑️ Hapus
+                                    </button>
+                                </div>
+                            `;
+                        } else {
+                            actions = `
+                                <div style="display:flex; gap:0.4rem; align-items:center;">
+                                    <span style="color:var(--text-muted); font-size:0.8rem;">Dibatalkan</span>
+                                    <button class="btn btn-sm btn-danger-outline" onclick="App.deleteOrder(${item.id}, '${item.nomor_pesanan}')" title="Hapus Pesanan">
+                                        🗑️ Hapus
+                                    </button>
+                                </div>
+                            `;
+                        }
+
+                        const layananBadge = isAmbil 
+                            ? '<span class="badge" style="background:#e0e7ff; color:#3730a3; font-weight:700; margin-bottom:4px; display:inline-block;">🏪 Ambil di Depot</span>' 
+                            : '<span class="badge" style="background:#fef3c7; color:#92400e; font-weight:700; margin-bottom:4px; display:inline-block;">🚚 Pesan Antar</span>';
+
+                        const alamatTampil = isAmbil 
+                            ? (item.alamat && item.alamat !== 'Ambil Sendiri di Depot' ? item.alamat : '<span style="color:var(--text-muted);">Diambil di depot</span>') 
+                            : item.alamat;
+
+                        return `
+                            <tr>
+                                <td><strong>${item.nomor_pesanan}</strong></td>
+                                <td>${this.formatTanggal(item.tanggal)}</td>
+                                <td>
+                                    <div><strong>${item.nama_pelanggan}</strong></div>
+                                    <a href="${waLink}" target="_blank" style="font-size:0.82rem; color:#16a34a; text-decoration:none;">
+                                        📱 ${item.no_hp}
+                                    </a>
+                                </td>
+                                <td style="max-width:210px; font-size:0.85rem;">
+                                    ${layananBadge}
+                                    <div>${alamatTampil}</div>
+                                    ${item.catatan ? `<small style="color:var(--text-muted); display:block; margin-top:2px;">Ket: ${item.catatan}</small>` : ''}
+                                </td>
+                                <td>
+                                    <div>${item.jumlah_galon}x ${jenis}</div>
+                                    <small style="color:var(--text-muted);">@ ${this.formatRupiah(item.harga_satuan)}</small>
+                                </td>
+                                <td><strong class="text-masuk">${this.formatRupiah(item.total)}</strong></td>
+                                <td><span class="badge badge-${item.metode_pembayaran}">${item.metode_pembayaran.toUpperCase()}</span></td>
+                                <td>${badgeStatus}</td>
+                                <td class="action-col">${actions}</td>
+                            </tr>
+                        `;
+                    }).join('');
+                } else {
+                    tbody.innerHTML = '<tr><td colspan="9" style="text-align:center; padding: 2rem; color: #64748b;">Tidak ada pesanan pada status ini.</td></tr>';
+                }
+            }
+        } catch (err) {
+            tbody.innerHTML = '<tr><td colspan="9" style="text-align:center; padding: 2rem; color: #ef4444;">Gagal memuat pesanan antrean.</td></tr>';
+        }
+    },
+
+    async updateOrderStatus(orderId, newStatus, noPesanan = '') {
+        const orderRef = noPesanan ? ` #${noPesanan}` : '';
+        const confirmMsg = newStatus === 'selesai' 
+            ? `Konfirmasi: Selesaikan pesanan${orderRef} dan masukkan totalnya otomatis ke Transaksi Penjualan Kas?`
+            : (newStatus === 'dibatalkan' ? `Batalkan pesanan${orderRef} ini?` : `Ubah status pesanan${orderRef} menjadi Sedang Diproses?`);
+
+        if (!confirm(confirmMsg)) return;
+
+        try {
+            const res = await this.authFetch('api/pesanan.php?action=update_status', {
+                method: 'POST',
+                body: JSON.stringify({ id: orderId, status: newStatus })
+            });
+            const result = await res.json();
+
+            if (result.success) {
+                this.showToast(result.message);
+                this.loadAdminOrders();
+                if (newStatus === 'selesai') {
+                    this.loadDashboardData();
+                    this.loadPenjualanList();
+                }
+            } else {
+                this.showToast(result.message || 'Gagal mengubah status.', 'error');
+            }
+        } catch (err) {
+            this.showToast('Gagal memproses pembaruan status.', 'error');
+        }
+    },
+
+    async deleteOrder(orderId, noPesanan = '') {
+        const orderRef = noPesanan ? ` #${noPesanan}` : '';
+        const confirmMsg = `Apakah Anda yakin ingin menghapus pesanan${orderRef} ini secara permanen?\n\nPerhatian: Jika pesanan ini sudah berstatus selesai, catatan transaksi di buku kas yang terkait juga otomatis akan ikut dihapus agar pembukuan tetap sinkron.`;
+
+        if (!confirm(confirmMsg)) return;
+
+        try {
+            const res = await this.authFetch(`api/pesanan.php?action=delete&id=${orderId}`, {
+                method: 'POST'
+            });
+            const result = await res.json();
+
+            if (result.success) {
+                this.showToast(result.message || `Pesanan${orderRef} berhasil dihapus.`);
+                this.loadAdminOrders();
+                this.loadDashboardData();
+                this.loadPenjualanList();
+            } else {
+                this.showToast(result.message || 'Gagal menghapus pesanan.', 'error');
+            }
+        } catch (err) {
+            this.showToast('Terjadi kesalahan saat menghapus pesanan.', 'error');
+        }
+    },
+
+    // ==========================================================
+    // KASIR LANGSUNG / FORM PENJUALAN OFFLINE
     // ==========================================================
     initSalesCalculations() {
         const form = document.getElementById('form-penjualan');
@@ -211,7 +822,6 @@ const App = {
         if (jumlahInput) jumlahInput.addEventListener('input', calculateTotal);
         if (hargaInput) hargaInput.addEventListener('input', calculateTotal);
 
-        // Auto ganti default harga ketika jenis transaksi berganti
         if (jenisSelect) {
             jenisSelect.addEventListener('change', () => {
                 if (jenisSelect.value === 'isi_ulang') {
@@ -223,7 +833,6 @@ const App = {
             });
         }
 
-        // Handle Submit Form Penjualan
         if (form) {
             form.addEventListener('submit', async (e) => {
                 e.preventDefault();
@@ -241,16 +850,14 @@ const App = {
                 };
 
                 try {
-                    const res = await fetch('api/transaksi.php?type=penjualan', {
+                    const res = await this.authFetch('api/transaksi.php?type=penjualan', {
                         method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify(payload)
                     });
                     const result = await res.json();
 
                     if (result.success) {
-                        this.showToast('Transaksi penjualan berhasil dicatat!');
-                        // Reset input kecuali tanggal
+                        this.showToast('Transaksi penjualan langsung berhasil disimpan!');
                         document.getElementById('penjualan-jumlah').value = '1';
                         document.getElementById('penjualan-catatan').value = '';
                         calculateTotal();
@@ -261,7 +868,7 @@ const App = {
                         this.showToast(result.message || 'Gagal menyimpan transaksi.', 'error');
                     }
                 } catch (err) {
-                    this.showToast('Terjadi kesalahan jaringan.', 'error');
+                    this.showToast('Terjadi kesalahan saat menyimpan transaksi.', 'error');
                 } finally {
                     submitBtn.disabled = false;
                     submitBtn.innerHTML = '💾 Simpan Transaksi Penjualan';
@@ -270,9 +877,8 @@ const App = {
         }
     },
 
-    // Tombol Preset Harga dan Kuantitas
+    // Tombol Preset Kasir
     initPresets() {
-        // Preset Kuantitas Galon
         document.querySelectorAll('.btn-preset-qty').forEach(btn => {
             btn.addEventListener('click', () => {
                 const addQty = parseInt(btn.dataset.qty, 10);
@@ -308,7 +914,7 @@ const App = {
     },
 
     // ==========================================================
-    // FORM PENGELUARAN OPERASIONAL
+    // FORM PENGELUARAN OPERASIONAL (KHUSUS ADMIN)
     // ==========================================================
     initExpenseForm() {
         const form = document.getElementById('form-pengeluaran');
@@ -328,9 +934,8 @@ const App = {
             };
 
             try {
-                const res = await fetch('api/transaksi.php?type=pengeluaran', {
+                const res = await this.authFetch('api/transaksi.php?type=pengeluaran', {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(payload)
                 });
                 const result = await res.json();
@@ -354,17 +959,36 @@ const App = {
         });
     },
 
+    // Load Kategori
+    async loadCategories() {
+        try {
+            const res = await fetch('api/transaksi.php?type=kategori');
+            const result = await res.json();
+            if (result.success && Array.isArray(result.data)) {
+                this.state.categories = result.data;
+                const selectEl = document.getElementById('pengeluaran-kategori');
+                if (selectEl) {
+                    selectEl.innerHTML = '<option value="">-- Pilih Kategori --</option>' + 
+                        result.data.map(cat => `<option value="${cat.id}">${cat.nama_kategori}</option>`).join('');
+                }
+            }
+        } catch (err) {
+            console.error('Gagal mengambil kategori:', err);
+        }
+    },
+
     // ==========================================================
-    // LOAD DATA PENJUALAN (TAB PENJUALAN)
+    // RIWAYAT PENJUALAN & PENGELUARAN (ADMIN)
     // ==========================================================
     async loadPenjualanList() {
+        if (!this.state.auth.isAdmin) return;
         const tbody = document.getElementById('tbody-penjualan');
         if (!tbody) return;
 
-        tbody.innerHTML = '<tr><td colspan="8" style="text-align:center; padding: 2rem;">Memuat data penjualan...</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="9" style="text-align:center; padding: 2rem;">Memuat data penjualan...</td></tr>';
 
         try {
-            const res = await fetch('api/transaksi.php?type=penjualan&limit=50');
+            const res = await this.authFetch('api/transaksi.php?type=penjualan&limit=50');
             const result = await res.json();
 
             if (result.success && result.data.length > 0) {
@@ -401,12 +1025,11 @@ const App = {
         }
     },
 
-    // Hapus Penjualan
     async deletePenjualan(id) {
         if (!confirm('Apakah Anda yakin ingin menghapus data penjualan ini?')) return;
 
         try {
-            const res = await fetch(`api/transaksi.php?type=penjualan&id=${id}`, {
+            const res = await this.authFetch(`api/transaksi.php?type=penjualan&id=${id}`, {
                 method: 'DELETE'
             });
             const result = await res.json();
@@ -423,17 +1046,15 @@ const App = {
         }
     },
 
-    // ==========================================================
-    // LOAD DATA PENGELUARAN (TAB PENGELUARAN)
-    // ==========================================================
     async loadPengeluaranList() {
+        if (!this.state.auth.isAdmin) return;
         const tbody = document.getElementById('tbody-pengeluaran');
         if (!tbody) return;
 
         tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; padding: 2rem;">Memuat data pengeluaran...</td></tr>';
 
         try {
-            const res = await fetch('api/transaksi.php?type=pengeluaran&limit=50');
+            const res = await this.authFetch('api/transaksi.php?type=pengeluaran&limit=50');
             const result = await res.json();
 
             if (result.success && result.data.length > 0) {
@@ -461,12 +1082,11 @@ const App = {
         }
     },
 
-    // Hapus Pengeluaran
     async deletePengeluaran(id) {
         if (!confirm('Apakah Anda yakin ingin menghapus data pengeluaran ini?')) return;
 
         try {
-            const res = await fetch(`api/transaksi.php?type=pengeluaran&id=${id}`, {
+            const res = await this.authFetch(`api/transaksi.php?type=pengeluaran&id=${id}`, {
                 method: 'DELETE'
             });
             const result = await res.json();
@@ -484,17 +1104,17 @@ const App = {
     },
 
     // ==========================================================
-    // DASHBOARD RINGKASAN DATA
+    // DASHBOARD RINGKASAN DATA (ADMIN)
     // ==========================================================
     async loadDashboardData() {
+        if (!this.state.auth.isAdmin) return;
         try {
-            const res = await fetch('api/laporan.php?action=dashboard');
+            const res = await this.authFetch('api/laporan.php?action=dashboard');
             const result = await res.json();
 
             if (!result.success || !result.data) return;
             const data = result.data;
 
-            // 1. Pemasukan Hari Ini & Bulan Ini
             const omzetHariIniEl = document.getElementById('dash-omzet-today');
             const omzetBulanIniEl = document.getElementById('dash-omzet-month');
             const omzetTahunIniEl = document.getElementById('dash-omzet-year');
@@ -503,7 +1123,6 @@ const App = {
             if (omzetBulanIniEl) omzetBulanIniEl.textContent = this.formatRupiah(data.bulan_ini.omzet);
             if (omzetTahunIniEl) omzetTahunIniEl.textContent = this.formatRupiah(data.tahun_ini.omzet);
 
-            // 2. Galon Terjual
             const galonTodayEl = document.getElementById('dash-galon-today');
             const galonBreakdownEl = document.getElementById('dash-galon-breakdown');
             if (galonTodayEl) galonTodayEl.textContent = `${data.hari_ini.galon_terjual} Galon`;
@@ -511,32 +1130,27 @@ const App = {
                 galonBreakdownEl.textContent = `Bulan ini: ${data.bulan_ini.galon_isi_ulang} Isi Ulang | ${data.bulan_ini.galon_baru} Galon Baru`;
             }
 
-            // 3. Pengeluaran Operasional
             const keluarTodayEl = document.getElementById('dash-expense-today');
             const keluarMonthEl = document.getElementById('dash-expense-month');
             if (keluarTodayEl) keluarTodayEl.textContent = this.formatRupiah(data.hari_ini.pengeluaran);
             if (keluarMonthEl) keluarMonthEl.textContent = `Bulan Ini: ${this.formatRupiah(data.bulan_ini.pengeluaran)}`;
 
-            // 4. Laba Bersih
             const labaTodayEl = document.getElementById('dash-profit-today');
             const labaMonthEl = document.getElementById('dash-profit-month');
             const cardProfit = document.getElementById('card-profit');
 
-            if (labaTodayEl) {
-                labaTodayEl.textContent = this.formatRupiah(data.hari_ini.laba_bersih);
-            }
+            if (labaTodayEl) labaTodayEl.textContent = this.formatRupiah(data.hari_ini.laba_bersih);
             if (labaMonthEl) {
                 const statusStr = data.bulan_ini.laba_bersih >= 0 ? 'Surplus' : 'Defisit';
                 labaMonthEl.textContent = `Bulan Ini: ${this.formatRupiah(data.bulan_ini.laba_bersih)} (${statusStr})`;
             }
 
-            // Warna kartu laba bersih
             if (cardProfit) {
                 cardProfit.classList.remove('card-success', 'card-danger');
                 cardProfit.classList.add(data.hari_ini.laba_bersih >= 0 ? 'card-success' : 'card-danger');
             }
 
-            // 5. Breakdown Kategori Pengeluaran Bulan Ini
+            // Breakdown Kategori Pengeluaran
             const listKategoriEl = document.getElementById('dash-breakdown-kategori');
             if (listKategoriEl && Array.isArray(data.kategori_pengeluaran_bulan_ini)) {
                 const totalBulanKeluar = data.bulan_ini.pengeluaran || 1;
@@ -563,7 +1177,7 @@ const App = {
                 }
             }
 
-            // 6. Breakdown Metode Pembayaran
+            // Breakdown Metode Bayar
             const listPayEl = document.getElementById('dash-breakdown-metode');
             if (listPayEl && Array.isArray(data.metode_pembayaran_bulan_ini)) {
                 if (data.metode_pembayaran_bulan_ini.length === 0) {
@@ -582,7 +1196,7 @@ const App = {
                 }
             }
 
-            // 7. Transaksi Terakhir di Dashboard
+            // Transaksi Terakhir di Dashboard
             const dashRecentTbody = document.getElementById('dash-tbody-recent');
             if (dashRecentTbody) {
                 const sales = (data.aktivitas_terkini && data.aktivitas_terkini.penjualan) || [];
@@ -609,17 +1223,20 @@ const App = {
     },
 
     // ==========================================================
-    // LAPORAN KEUANGAN & BUKU KAS
+    // LAPORAN KEUANGAN & BUKU KAS (ADMIN)
     // ==========================================================
     initReportFilters() {
         const formFilter = document.getElementById('form-filter-laporan');
-        const filterPills = document.querySelectorAll('.period-pill');
+        const filterPills = document.querySelectorAll('.period-pills .period-pill');
         const btnPrint = document.getElementById('btn-print-laporan');
 
-        // Preset Periode (Hari ini, 7 hari, Bulan ini, Bulan lalu)
         filterPills.forEach(pill => {
+            if (pill.closest('#order-status-filters')) return; // Jangan bentrok dengan filter antrean
+
             pill.addEventListener('click', () => {
-                filterPills.forEach(p => p.classList.remove('active'));
+                filterPills.forEach(p => {
+                    if (!p.closest('#order-status-filters')) p.classList.remove('active');
+                });
                 pill.classList.add('active');
 
                 const mode = pill.dataset.period;
@@ -662,18 +1279,15 @@ const App = {
             });
         });
 
-        // Filter Form Submit
         if (formFilter) {
             formFilter.addEventListener('submit', (e) => {
                 e.preventDefault();
-                filterPills.forEach(p => p.classList.remove('active'));
                 this.state.reportStartDate = document.getElementById('filter-start-date').value;
                 this.state.reportEndDate = document.getElementById('filter-end-date').value;
                 this.loadLaporanData();
             });
         }
 
-        // Cetak Laporan
         if (btnPrint) {
             btnPrint.addEventListener('click', () => {
                 window.print();
@@ -682,6 +1296,7 @@ const App = {
     },
 
     async loadLaporanData() {
+        if (!this.state.auth.isAdmin) return;
         const start = this.state.reportStartDate;
         const end = this.state.reportEndDate;
         const tbody = document.getElementById('tbody-laporan');
@@ -690,13 +1305,12 @@ const App = {
         tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; padding: 2rem;">Memuat buku kas laporan keuangan...</td></tr>';
 
         try {
-            const res = await fetch(`api/laporan.php?action=laporan&start_date=${start}&end_date=${end}`);
+            const res = await this.authFetch(`api/laporan.php?action=laporan&start_date=${start}&end_date=${end}`);
             const result = await res.json();
 
             if (result.success && result.data) {
                 const { ringkasan, buku_kas } = result.data;
 
-                // Update Ringkasan Laporan
                 const elPemasukan = document.getElementById('rep-total-masuk');
                 const elPengeluaran = document.getElementById('rep-total-keluar');
                 const elLaba = document.getElementById('rep-laba-bersih');
@@ -712,17 +1326,11 @@ const App = {
                     elGalon.textContent = `${ringkasan.total_galon_terjual} Galon (${ringkasan.total_galon_isi_ulang} Isi Ulang, ${ringkasan.total_galon_baru} Baru)`;
                 }
 
-                // Update Print Header Info
                 const printPeriodeEl = document.getElementById('print-periode-text');
                 const printTglCetakEl = document.getElementById('print-tgl-cetak');
-                if (printPeriodeEl) {
-                    printPeriodeEl.textContent = `${this.formatTanggal(start)} s/d ${this.formatTanggal(end)}`;
-                }
-                if (printTglCetakEl) {
-                    printTglCetakEl.textContent = new Date().toLocaleString('id-ID');
-                }
+                if (printPeriodeEl) printPeriodeEl.textContent = `${this.formatTanggal(start)} s/d ${this.formatTanggal(end)}`;
+                if (printTglCetakEl) printTglCetakEl.textContent = new Date().toLocaleString('id-ID');
 
-                // Render Print Summary Box
                 const printRepMasuk = document.getElementById('print-rep-masuk');
                 const printRepKeluar = document.getElementById('print-rep-keluar');
                 const printRepLaba = document.getElementById('print-rep-laba');
@@ -730,7 +1338,6 @@ const App = {
                 if (printRepKeluar) printRepKeluar.textContent = this.formatRupiah(ringkasan.total_pengeluaran);
                 if (printRepLaba) printRepLaba.textContent = this.formatRupiah(ringkasan.laba_bersih);
 
-                // Render Tabel Buku Kas
                 if (buku_kas.length > 0) {
                     tbody.innerHTML = buku_kas.map((item, idx) => {
                         const isMasuk = item.arus === 'masuk';

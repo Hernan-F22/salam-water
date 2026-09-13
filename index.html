@@ -3,13 +3,51 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Salam Water - Laporan Keuangan Depot Air Minum Isi Ulang</title>
-    <meta name="description" content="Aplikasi web manajemen keuangan dan laporan arus kas depot air minum isi ulang Salam Water">
+    <title>Salam Water - Laporan Keuangan & Pemesanan Depot Air Minum</title>
+    <meta name="description" content="Aplikasi web pemesanan galon online dan manajemen laporan keuangan depot air minum isi ulang Salam Water">
     <link rel="icon" type="image/svg+xml" href="assets/favicon.svg">
     <link rel="apple-touch-icon" href="assets/favicon.svg">
-    <link rel="stylesheet" href="assets/style.css">
+    <link rel="stylesheet" href="assets/style.css?v=3.3">
+    <style>
+        /* ==========================================================
+           CRITICAL ROLE & LAYOUT CONTROL (ZERO LEAKAGE / INSTANT SAFE)
+           ========================================================== */
+        body:not(.role-admin) .admin-only { display: none !important; }
+        body.role-admin .guest-only { display: none !important; }
+        body.role-admin .header-admin-tools.admin-only { display: flex !important; align-items: center; gap: 0.5rem; }
+        body.role-admin button.nav-btn.admin-only,
+        body.role-admin .nav-btn.admin-only { display: flex !important; align-items: center; gap: 0.5rem; }
+        body.role-admin button.btn.admin-only,
+        body.role-admin a.btn.admin-only { display: inline-flex !important; }
+        body.role-admin tr.admin-only { display: table-row !important; }
+        body.role-admin th.admin-only,
+        body.role-admin td.admin-only { display: table-cell !important; }
+
+        /* Tab Pane Visibility */
+        .tab-pane { display: none !important; }
+        .tab-pane.active { display: block !important; }
+
+        /* Login Card Container */
+        .login-card-container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 1.5rem 0;
+            width: 100%;
+        }
+        .login-card {
+            background: #ffffff;
+            border: 1px solid #e2e8f0;
+            border-radius: 14px;
+            max-width: 440px;
+            width: 100%;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.08), 0 4px 6px -4px rgba(0, 0, 0, 0.03);
+            overflow: hidden;
+            margin: 0 auto;
+        }
+    </style>
 </head>
-<body>
+<body class="role-guest">
 
     <!-- ==========================================================
          TOP HEADER BAR
@@ -23,11 +61,28 @@
                     </div>
                     <div>
                         <h1 class="brand-title">SALAM WATER</h1>
-                        <p class="brand-subtitle">Sistem Keuangan & Laporan Depot Air Minum Isi Ulang</p>
+                        <p class="brand-subtitle">Depot Air Minum Isi Ulang & Pesan Antar</p>
                     </div>
                 </div>
                 <div class="header-meta">
                     <div id="live-clock-badge" class="badge-live-date">📅 Memuat tanggal...</div>
+                    
+                    <!-- Tombol Login Admin (Saat Mode Tamu / Publik) -->
+                    <div class="guest-only">
+                        <button type="button" id="btn-open-login" class="btn btn-sm btn-secondary" style="font-weight: 700; background: rgba(255,255,255,0.2); color: #ffffff; border-color: rgba(255,255,255,0.35);">
+                            🔐 Login Admin
+                        </button>
+                    </div>
+
+                    <!-- Indikator & Logout Admin (Saat Mode Admin Aktif) -->
+                    <div class="header-admin-tools admin-only">
+                        <span class="badge" style="background: #fef08a; color: #854d0e; font-weight: 800; padding: 0.35rem 0.75rem; font-size: 0.8rem;">
+                            👑 ADMIN WATER
+                        </span>
+                        <button type="button" id="btn-logout" class="btn btn-sm" style="background: rgba(239, 68, 68, 0.25); color: #ffffff; border: 1px solid rgba(255,255,255,0.4);">
+                            🚪 Logout
+                        </button>
+                    </div>
                 </div>
             </div>
         </div>
@@ -39,16 +94,32 @@
     <nav class="nav-tabs-wrapper no-print">
         <div class="container">
             <div class="nav-tabs">
-                <button class="nav-btn active" data-tab="dashboard">
-                    📊 <span>Ringkasan Dashboard</span>
+                <!-- Tab Publik / Pelanggan (Selalu Terbuka untuk Tamu) -->
+                <button class="nav-btn active" data-tab="pesan">
+                    🛍️ <span>Pesan Galon</span>
                 </button>
-                <button class="nav-btn" data-tab="penjualan">
-                    💧 <span>Penjualan Galon</span>
+                <button class="nav-btn" data-tab="lacak">
+                    🔍 <span>Lacak Pesanan</span>
                 </button>
-                <button class="nav-btn" data-tab="pengeluaran">
-                    💸 <span>Pengeluaran Operasional</span>
+                <button class="nav-btn guest-only" data-tab="login">
+                    🔐 <span>Login Admin</span>
                 </button>
-                <button class="nav-btn" data-tab="laporan">
+
+                <!-- Tab Khusus Pengelola / Admin (Hanya Muncul saat Login) -->
+                <button class="nav-btn admin-only" data-tab="antrean">
+                    📥 <span>Pesanan Masuk</span>
+                    <span id="badge-pending-count" class="badge badge-counter" style="display: none;">0</span>
+                </button>
+                <button class="nav-btn admin-only" data-tab="dashboard">
+                    📊 <span>Ringkasan Keuangan</span>
+                </button>
+                <button class="nav-btn admin-only" data-tab="penjualan">
+                    💧 <span>Kasir Langsung</span>
+                </button>
+                <button class="nav-btn admin-only" data-tab="pengeluaran">
+                    💸 <span>Pengeluaran</span>
+                </button>
+                <button class="nav-btn admin-only" data-tab="laporan">
                     📑 <span>Laporan & Buku Kas</span>
                 </button>
             </div>
@@ -62,12 +133,301 @@
         <div class="container">
 
             <!-- ==========================================================
-                 TAB 1: DASHBOARD RINGKASAN
+                 TAB 1: PESAN GALON ONLINE (PUBLIK / TAMU TANPA LOGIN)
                  ========================================================== -->
-            <section id="pane-dashboard" class="tab-pane active">
+            <section id="pane-pesan" class="tab-pane active">
+                <div class="hero-order">
+                    <h2 class="hero-title">Air Minum Higienis, Segar & Praktis</h2>
+                    <p class="hero-desc">Pesan air minum isi ulang (ambil di depot / pesan antar) dan galon baru dengan mudah dan cepat tanpa perlu login. Cukup isi formulir di bawah ini!</p>
+                </div>
+
+                <div class="grid-2col">
+                    <!-- Form Pemesanan -->
+                    <div class="card">
+                        <div class="card-header">
+                            <h3 class="card-title">📝 Formulir Pemesanan Galon</h3>
+                        </div>
+                        <div class="card-body">
+                            <form id="form-pesan-online">
+                                <div class="form-grid">
+                                    <!-- Nama Pemesan -->
+                                    <div class="form-group col-span-2">
+                                        <label class="form-label" for="order-nama">Nama Lengkap Pemesan *</label>
+                                        <input type="text" id="order-nama" class="form-control" placeholder="Contoh: Pak Budi / Ibu Siti" required>
+                                    </div>
+
+                                    <!-- Nomor WhatsApp / HP -->
+                                    <div class="form-group col-span-2">
+                                        <label class="form-label" for="order-nohp">Nomor WhatsApp / HP Aktif *</label>
+                                        <input type="tel" id="order-nohp" class="form-control" placeholder="Contoh: 081234567890" required>
+                                        <small style="color: var(--text-muted); font-size: 0.78rem;">Digunakan untuk konfirmasi dan melacak status pesanan Anda.</small>
+                                    </div>
+
+                                    <!-- Pilihan Produk & Tarif Satuan -->
+                                    <div class="form-group col-span-2">
+                                        <label class="form-label">Pilih Layanan & Tarif Satuan *</label>
+                                        <div class="product-radio-grid">
+                                            <div class="product-radio-card active" data-jenis="isi_ulang" data-harga="5000">
+                                                <div class="product-radio-title">💧 Isi Ulang (Ambil di Depot)</div>
+                                                <div class="product-radio-price">Rp 5.000</div>
+                                                <div class="product-radio-desc">Ambil langsung di depot (tanpa antar)</div>
+                                            </div>
+
+                                            <div class="product-radio-card" data-jenis="isi_ulang" data-harga="6000">
+                                                <div class="product-radio-title">🚚 Isi Ulang (Pesan Antar)</div>
+                                                <div class="product-radio-price">Rp 6.000</div>
+                                                <div class="product-radio-desc">Diantar langsung ke rumah / alamat</div>
+                                            </div>
+
+                                            <div class="product-radio-card" data-jenis="galon_baru" data-harga="22000">
+                                                <div class="product-radio-title">🪣 Tukar Galon Kosong</div>
+                                                <div class="product-radio-price">Rp 22.000</div>
+                                                <div class="product-radio-desc">Penggantian galon kosong</div>
+                                            </div>
+
+                                            <div class="product-radio-card" data-jenis="galon_baru" data-harga="65000">
+                                                <div class="product-radio-title">🪣 Galon Baru Komplit</div>
+                                                <div class="product-radio-price">Rp 65.000</div>
+                                                <div class="product-radio-desc">Galon baru + isi air penuh</div>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!-- Alamat Pengantaran / Catatan Pengambilan -->
+                                    <div class="form-group col-span-2">
+                                        <label class="form-label" id="label-order-alamat" for="order-alamat">🏪 Catatan Pengambilan / Info Tambahan <small style="font-weight:400; color:var(--text-muted);">(Opsional - Ambil di Depot)</small></label>
+                                        <textarea id="order-alamat" class="form-control" placeholder="Bisa dikosongkan (ambil sendiri di depot) atau tulis estimasi jam pengambilan"></textarea>
+                                        <small id="helper-order-alamat" style="font-size: 0.78rem; color: #4338ca; display: block; margin-top: 4px;">Karena Anda memilih tarif Rp 5.000, pesanan diambil sendiri di depot tanpa pengantaran.</small>
+                                    </div>
+
+                                    <!-- Jumlah Galon -->
+                                    <div class="form-group">
+                                        <label class="form-label" for="order-jumlah">Jumlah Galon *</label>
+                                        <input type="number" id="order-jumlah" class="form-control" min="1" value="1" required>
+                                        <div class="preset-group">
+                                            <button type="button" class="btn-preset btn-preset-order-qty" data-qty="1">1</button>
+                                            <button type="button" class="btn-preset btn-preset-order-qty" data-qty="2">2</button>
+                                            <button type="button" class="btn-preset btn-preset-order-qty" data-qty="3">3</button>
+                                            <button type="button" class="btn-preset btn-preset-order-qty" data-qty="5">5</button>
+                                            <button type="button" class="btn-preset btn-preset-order-qty" data-qty="10">10</button>
+                                        </div>
+                                    </div>
+
+                                    <!-- Metode Pembayaran -->
+                                    <div class="form-group">
+                                        <label class="form-label" for="order-metode">Metode Pembayaran *</label>
+                                        <select id="order-metode" class="form-control" required>
+                                            <option value="tunai" selected>💵 Tunai / Cash (Bayar di Tempat)</option>
+                                        </select>
+                                    </div>
+
+                                    <!-- Catatan Tambahan -->
+                                    <div class="form-group col-span-2">
+                                        <label class="form-label" for="order-catatan">Catatan untuk Pengantar (Opsional)</label>
+                                        <input type="text" id="order-catatan" class="form-control" placeholder="Contoh: Taruh di teras saja jika tidak ada orang / hubungi via WA">
+                                    </div>
+                                </div>
+
+                                <!-- Kalkulasi Total Realtime -->
+                                <div class="total-highlight-box">
+                                    <span class="total-highlight-label">Perkiraan Total Bayar:</span>
+                                    <span id="order-total-display" class="total-highlight-val">Rp 5.000</span>
+                                </div>
+
+                                <div style="margin-top: 1.25rem;">
+                                    <button type="submit" id="btn-submit-order" class="btn btn-primary" style="width: 100%; padding: 0.85rem; font-size: 1.05rem;">
+                                        🚀 Kirim Pesanan Sekarang
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+
+                    <!-- Informasi Layanan & Box Konfirmasi Pesanan -->
+                    <div>
+                        <!-- Box Pesanan Sukses (Muncul setelah submit) -->
+                        <div id="box-order-success" class="card" style="display: none; border-color: #bbf7d0; background: #f0fdf4; margin-bottom: 1.5rem;">
+                            <div class="card-body" style="text-align: center;">
+                                <div style="font-size: 3rem; margin-bottom: 0.5rem;">🎉</div>
+                                <h3 style="color: #166534; font-size: 1.25rem; font-weight: 800;">Pesanan Berhasil Diterima!</h3>
+                                <p style="color: #15803d; font-size: 0.9rem; margin: 0.4rem 0 1rem 0;">
+                                    Nomor Pesanan Anda: <strong id="success-ord-no" style="font-size: 1.1rem; text-decoration: underline;">-</strong>
+                                </p>
+                                <div id="success-ord-details" style="background: #ffffff; border: 1px solid #bbf7d0; border-radius: var(--radius-md); padding: 1rem; text-align: left; font-size: 0.88rem; margin-bottom: 1.25rem;">
+                                    <!-- Detail pesanan diinjeksi via JS -->
+                                </div>
+                                <div style="display: flex; flex-direction: column; gap: 0.6rem;">
+                                    <a id="btn-wa-confirm-1" href="https://wa.me/6287879996392" target="_blank" class="btn btn-whatsapp" style="width: 100%; font-size: 0.92rem; font-weight: 700; text-align: center; justify-content: center;">
+                                        📱 Konfirmasi via WhatsApp 1 (0878-7999-6392)
+                                    </a>
+                                    <a id="btn-wa-confirm-2" href="https://wa.me/6285659719922" target="_blank" class="btn btn-whatsapp" style="width: 100%; font-size: 0.92rem; font-weight: 700; text-align: center; justify-content: center; background-color: #128c7e;">
+                                        📱 Konfirmasi via WhatsApp 2 (0856-5971-9922)
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Keunggulan Depot -->
+                        <div class="card">
+                            <div class="card-header">
+                                <h3 class="card-title">✨ Keunggulan Depot Salam Water</h3>
+                            </div>
+                            <div class="card-body">
+                                <ul class="breakdown-list">
+                                    <li class="breakdown-item">
+                                        <div class="breakdown-name">💧 Filtrasi Bertingkat & Ozon UV</div>
+                                        <div class="breakdown-desc" style="font-size: 0.82rem; color: var(--text-muted);">
+                                            Air diproses melalui filter sedimen mikro, karbon aktif, sterilisasi lampu ultraviolet dan ozonisasi higienis.
+                                        </div>
+                                    </li>
+                                    <li class="breakdown-item">
+                                        <div class="breakdown-name">🚚 Pengantaran Cepat & Tepat Waktu</div>
+                                        <div class="breakdown-desc" style="font-size: 0.82rem; color: var(--text-muted);">
+                                            Armada pengantar siap mengantar pesanan langsung ke perumahan, perkantoran, dan tempat usaha Anda.
+                                        </div>
+                                    </li>
+                                    <li class="breakdown-item">
+                                        <div class="breakdown-name">💵 Pembayaran Tunai Praktis</div>
+                                        <div class="breakdown-desc" style="font-size: 0.82rem; color: var(--text-muted);">
+                                            Pembayaran tunai (cash) langsung saat galon air diantar ke tempat atau diambil di depot.
+                                        </div>
+                                    </li>
+                                    <li class="breakdown-item">
+                                        <div class="breakdown-name">📞 Butuh Bantuan? Hubungi Kami</div>
+                                        <div class="breakdown-desc" style="font-size: 0.82rem; color: var(--text-muted); line-height: 1.5;">
+                                            Buka setiap hari: <strong>07.30 - 20.00 WIB</strong><br>
+                                            📱 WA Depot 1: <a href="https://wa.me/6287879996392" target="_blank" style="color: #0284c7; font-weight: 700;">0878-7999-6392</a><br>
+                                            📱 WA Depot 2: <a href="https://wa.me/6285659719922" target="_blank" style="color: #0284c7; font-weight: 700;">0856-5971-9922</a>
+                                        </div>
+                                    </li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ==========================================================
+                 TAB 2: LACAK PESANAN (PUBLIK)
+                 ========================================================== -->
+            <section id="pane-lacak" class="tab-pane">
                 <div class="section-header">
                     <div>
-                        <h2 class="section-title">Ringkasan Kinerja Depot</h2>
+                        <h2 class="section-title">Lacak Status Pesanan Anda</h2>
+                        <p class="section-desc">Masukkan nomor WhatsApp atau Nomor Pesanan Anda untuk memeriksa progres pesanan.</p>
+                    </div>
+                </div>
+
+                <div class="card" style="margin-bottom: 1.5rem;">
+                    <div class="card-body">
+                        <form id="form-lacak-pesanan" style="display: flex; gap: 0.75rem; flex-wrap: wrap;">
+                            <input type="text" id="lacak-input-key" class="form-control" placeholder="Masukkan Nomor WhatsApp atau Nomor Pesanan (misal: 081234567890)" style="flex: 1 1 280px;" required>
+                            <button type="submit" class="btn btn-primary">🔍 Cari Pesanan</button>
+                        </form>
+                    </div>
+                </div>
+
+                <!-- Hasil Pencarian Pesanan -->
+                <div id="lacak-hasil-container">
+                    <div class="card">
+                        <div class="card-body" style="text-align: center; color: var(--text-muted); padding: 3rem 1rem;">
+                            Silakan masukkan nomor WhatsApp Anda di atas untuk melihat riwayat pesanan galon.
+                        </div>
+                    </div>
+                </div>
+            </section>
+ 
+             <!-- ==========================================================
+                  TAB: LOGIN ADMIN (DEDIKASI RESPONSIF)
+                  ========================================================== -->
+             <section id="pane-login" class="tab-pane">
+                 <div class="login-card-container">
+                     <div class="login-card">
+                         <div class="login-card-header">
+                             <div class="login-card-icon">🔐</div>
+                             <h2 class="login-card-title">Login Pengelola Depot</h2>
+                             <p class="login-card-subtitle">Masuk untuk mengelola keuangan, pesanan masuk & kasir</p>
+                         </div>
+                         <div class="login-card-body">
+                             <div id="login-alert-tab" style="display: none; padding: 0.75rem 1rem; border-radius: var(--radius-md); margin-bottom: 1.25rem; font-size: 0.88rem; line-height: 1.4;"></div>
+ 
+                             <form id="form-login-tab">
+                                 <div class="form-group" style="margin-bottom: 1.2rem;">
+                                     <label class="form-label" for="login-tab-username">Username Admin</label>
+                                     <input type="text" id="login-tab-username" class="form-control" placeholder="Masukkan username admin" required autocomplete="username">
+                                 </div>
+ 
+                                 <div class="form-group" style="margin-bottom: 1.5rem;">
+                                     <label class="form-label" for="login-tab-password">Password Admin</label>
+                                     <div class="input-pass-wrapper">
+                                         <input type="password" id="login-tab-password" class="form-control" placeholder="••••••••" required autocomplete="current-password">
+                                         <button type="button" class="btn-toggle-eye" id="btn-toggle-tab-pass" title="Tampilkan/Sembunyikan Password">
+                                             👁️
+                                         </button>
+                                     </div>
+                                 </div>
+ 
+                                 <button type="submit" id="btn-submit-login-tab" class="btn btn-primary" style="width: 100%; padding: 0.8rem; font-size: 1rem; font-weight: 700;">
+                                     🚀 Masuk ke Panel Admin
+                                 </button>
+                             </form>
+                         </div>
+                     </div>
+                 </div>
+             </section>
+ 
+             <!-- ==========================================================
+                  TAB 3: KELOLA PESANAN MASUK (KHUSUS ADMIN)
+                  ========================================================== -->
+            <section id="pane-antrean" class="tab-pane">
+                <div class="section-header">
+                    <div>
+                        <h2 class="section-title">📥 Antrean Pesanan Pelanggan</h2>
+                        <p class="section-desc">Kelola pesanan masuk dari pelanggan online. Selesaikan pesanan agar otomatis tercatat ke buku kas.</p>
+                    </div>
+                    <button class="btn btn-sm btn-secondary" onclick="App.loadAdminOrders()">🔄 Refresh Pesanan</button>
+                </div>
+
+                <!-- Filter Status Pesanan -->
+                <div class="period-pills" id="order-status-filters">
+                    <button type="button" class="period-pill active" data-status="">Semua Pesanan</button>
+                    <button type="button" class="period-pill" data-status="menunggu">🟡 Menunggu</button>
+                    <button type="button" class="period-pill" data-status="diproses">⚙️ Sedang Diproses</button>
+                    <button type="button" class="period-pill" data-status="selesai">🟢 Selesai</button>
+                    <button type="button" class="period-pill" data-status="dibatalkan">🔴 Dibatalkan</button>
+                </div>
+
+                <div class="card">
+                    <div class="table-responsive">
+                        <table class="custom-table">
+                            <thead>
+                                <tr>
+                                    <th>No. Pesanan</th>
+                                    <th>Tanggal</th>
+                                    <th>Pelanggan</th>
+                                    <th>Layanan / Alamat</th>
+                                    <th>Pesanan</th>
+                                    <th>Total</th>
+                                    <th>Metode</th>
+                                    <th>Status</th>
+                                    <th class="action-col">Aksi Admin</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tbody-antrean-orders">
+                                <tr><td colspan="9" style="text-align:center; padding: 2rem;">Memuat daftar pesanan...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ==========================================================
+                 TAB 4: DASHBOARD RINGKASAN FINANSIAL (KHUSUS ADMIN)
+                 ========================================================== -->
+            <section id="pane-dashboard" class="tab-pane">
+                <div class="section-header">
+                    <div>
+                        <h2 class="section-title">Ringkasan Kinerja & Laporan Keuangan</h2>
                         <p class="section-desc">Pantau omzet penjualan, biaya operasional, dan laba bersih secara real-time.</p>
                     </div>
                 </div>
@@ -126,7 +486,6 @@
 
                 <!-- 2 Kolom: Analisis Pengeluaran & Metode Bayar -->
                 <div class="grid-2col">
-                    <!-- Breakdown Pengeluaran Bulan Ini -->
                     <div class="card">
                         <div class="card-header">
                             <h3 class="card-title">📦 Pengeluaran Operasional Bulan Ini</h3>
@@ -138,7 +497,6 @@
                         </div>
                     </div>
 
-                    <!-- Breakdown Metode Pembayaran & Saldo Kasir -->
                     <div class="card">
                         <div class="card-header">
                             <h3 class="card-title">💳 Metode Pembayaran Penjualan Bulan Ini</h3>
@@ -176,31 +534,28 @@
             </section>
 
             <!-- ==========================================================
-                 TAB 2: TRANSAKSI PENJUALAN
+                 TAB 5: KASIR LANGSUNG / PENJUALAN OFFLINE (KHUSUS ADMIN)
                  ========================================================== -->
             <section id="pane-penjualan" class="tab-pane">
                 <div class="section-header">
                     <div>
-                        <h2 class="section-title">Pencatatan Penjualan Galon</h2>
-                        <p class="section-desc">Catat penjualan air isi ulang harian atau pembelian galon baru.</p>
+                        <h2 class="section-title">Pencatatan Penjualan Langsung di Depot</h2>
+                        <p class="section-desc">Catat transaksi penjualan air isi ulang atau galon baru untuk pembeli langsung di tempat.</p>
                     </div>
                 </div>
 
-                <!-- Form Input Penjualan -->
                 <div class="card" style="margin-bottom: 1.75rem;">
                     <div class="card-header">
-                        <h3 class="card-title">➕ Form Input Penjualan</h3>
+                        <h3 class="card-title">➕ Form Input Penjualan Langsung</h3>
                     </div>
                     <div class="card-body">
                         <form id="form-penjualan">
                             <div class="form-grid">
-                                <!-- Tanggal -->
                                 <div class="form-group">
                                     <label class="form-label" for="penjualan-tanggal">Tanggal Transaksi</label>
                                     <input type="date" id="penjualan-tanggal" class="form-control" required>
                                 </div>
 
-                                <!-- Jenis Transaksi -->
                                 <div class="form-group">
                                     <label class="form-label" for="penjualan-jenis">Jenis Transaksi</label>
                                     <select id="penjualan-jenis" class="form-control" required>
@@ -209,7 +564,6 @@
                                     </select>
                                 </div>
 
-                                <!-- Jumlah Galon -->
                                 <div class="form-group">
                                     <label class="form-label" for="penjualan-jumlah">Jumlah Galon</label>
                                     <input type="number" id="penjualan-jumlah" class="form-control" min="1" value="1" required>
@@ -222,7 +576,6 @@
                                     </div>
                                 </div>
 
-                                <!-- Harga Satuan -->
                                 <div class="form-group">
                                     <label class="form-label" for="penjualan-harga">Harga Satuan (Rp)</label>
                                     <input type="number" id="penjualan-harga" class="form-control" min="0" step="500" value="5000" required>
@@ -234,24 +587,19 @@
                                     </div>
                                 </div>
 
-                                <!-- Metode Pembayaran -->
                                 <div class="form-group">
                                     <label class="form-label" for="penjualan-metode">Metode Pembayaran</label>
                                     <select id="penjualan-metode" class="form-control" required>
-                                        <option value="tunai">💵 Tunai (Cash)</option>
-                                        <option value="qris">📱 QRIS</option>
-                                        <option value="transfer">🏦 Transfer Bank</option>
+                                        <option value="tunai" selected>💵 Tunai (Cash)</option>
                                     </select>
                                 </div>
 
-                                <!-- Catatan / Pembeli -->
                                 <div class="form-group">
                                     <label class="form-label" for="penjualan-catatan">Catatan / Pelanggan (Opsional)</label>
-                                    <input type="text" id="penjualan-catatan" class="form-control" placeholder="Contoh: Antar Warung Bu Siti / Mas Dimas">
+                                    <input type="text" id="penjualan-catatan" class="form-control" placeholder="Contoh: Pembeli bawa galon sendiri">
                                 </div>
                             </div>
 
-                            <!-- Kalkulasi Realtime Total -->
                             <div class="total-highlight-box">
                                 <span class="total-highlight-label">Total Pembayaran:</span>
                                 <span id="penjualan-total-display" class="total-highlight-val">Rp 5.000</span>
@@ -266,10 +614,9 @@
                     </div>
                 </div>
 
-                <!-- Tabel Riwayat Penjualan -->
                 <div class="card">
                     <div class="card-header">
-                        <h3 class="card-title">📋 Riwayat Transaksi Penjualan</h3>
+                        <h3 class="card-title">📋 Riwayat Transaksi Penjualan Langsung</h3>
                     </div>
                     <div class="table-responsive">
                         <table class="custom-table">
@@ -295,7 +642,7 @@
             </section>
 
             <!-- ==========================================================
-                 TAB 3: PENGELUARAN OPERASIONAL
+                 TAB 6: PENGELUARAN OPERASIONAL (KHUSUS ADMIN)
                  ========================================================== -->
             <section id="pane-pengeluaran" class="tab-pane">
                 <div class="section-header">
@@ -305,7 +652,6 @@
                     </div>
                 </div>
 
-                <!-- Form Input Pengeluaran -->
                 <div class="card" style="margin-bottom: 1.75rem;">
                     <div class="card-header">
                         <h3 class="card-title">➕ Form Catat Pengeluaran</h3>
@@ -313,13 +659,11 @@
                     <div class="card-body">
                         <form id="form-pengeluaran">
                             <div class="form-grid">
-                                <!-- Tanggal -->
                                 <div class="form-group">
                                     <label class="form-label" for="pengeluaran-tanggal">Tanggal Pengeluaran</label>
                                     <input type="date" id="pengeluaran-tanggal" class="form-control" required>
                                 </div>
 
-                                <!-- Kategori -->
                                 <div class="form-group">
                                     <label class="form-label" for="pengeluaran-kategori">Kategori Pengeluaran</label>
                                     <select id="pengeluaran-kategori" class="form-control" required>
@@ -327,13 +671,11 @@
                                     </select>
                                 </div>
 
-                                <!-- Nominal -->
                                 <div class="form-group">
                                     <label class="form-label" for="pengeluaran-nominal">Nominal Pengeluaran (Rp)</label>
                                     <input type="number" id="pengeluaran-nominal" class="form-control" min="1000" step="1000" placeholder="Contoh: 65000" required>
                                 </div>
 
-                                <!-- Catatan -->
                                 <div class="form-group col-span-2">
                                     <label class="form-label" for="pengeluaran-catatan">Keterangan / Catatan</label>
                                     <input type="text" id="pengeluaran-catatan" class="form-control" placeholder="Contoh: Beli 1 dus tutup galon biru & 2 pack tisu antiseptik">
@@ -349,7 +691,6 @@
                     </div>
                 </div>
 
-                <!-- Tabel Riwayat Pengeluaran -->
                 <div class="card">
                     <div class="card-header">
                         <h3 class="card-title">📋 Riwayat Pengeluaran Operasional</h3>
@@ -375,11 +716,10 @@
             </section>
 
             <!-- ==========================================================
-                 TAB 4: LAPORAN & BUKU KAS (PRINT READY)
+                 TAB 7: LAPORAN & BUKU KAS (KHUSUS ADMIN - PRINT READY)
                  ========================================================== -->
             <section id="pane-laporan" class="tab-pane">
-                
-                <!-- HEADER KHUSUS CETAK RESMI (Hanya Muncul saat Dicetak) -->
+                <!-- HEADER KHUSUS CETAK RESMI -->
                 <div class="print-only print-header">
                     <h1>DEPOT AIR MINUM ISI ULANG "SALAM WATER"</h1>
                     <p>Jl. Raya Air Sehat No. 123 - Layanan Air Minum Higienis & Berkualitas</p>
@@ -402,7 +742,6 @@
                     </div>
                 </div>
 
-                <!-- Filter Card (Sembunyi saat Print) -->
                 <div class="filter-card no-print">
                     <div class="period-pills">
                         <button type="button" class="period-pill" data-period="hari_ini">Hari Ini</button>
@@ -426,7 +765,6 @@
                     </form>
                 </div>
 
-                <!-- Ringkasan Periode Laporan -->
                 <div class="stats-grid no-print">
                     <div class="stat-card">
                         <div class="stat-header">
@@ -462,7 +800,6 @@
                     </div>
                 </div>
 
-                <!-- Tabel Buku Kas Kronologis -->
                 <div class="card">
                     <div class="card-header no-print">
                         <h3 class="card-title">📖 Buku Kas Arus Keuangan</h3>
@@ -487,7 +824,6 @@
                     </div>
                 </div>
 
-                <!-- Kotak Rekapitulasi Khusus Format Cetak / Print -->
                 <div class="print-only print-summary-box">
                     <table class="print-summary-table">
                         <tr>
@@ -505,7 +841,6 @@
                     </table>
                 </div>
 
-                <!-- Kolom Tanda Tangan Cetak Resmi -->
                 <div class="print-only print-signatures">
                     <div class="signature-box">
                         <p>Dibuat Oleh,</p>
@@ -518,7 +853,6 @@
                         <p class="signature-line">( Pengelola Depot Salam Water )</p>
                     </div>
                 </div>
-
             </section>
 
         </div>
@@ -527,7 +861,7 @@
     <!-- Toast Notification Container -->
     <div class="toast-container"></div>
 
-    <!-- Script JS -->
-    <script src="assets/app.js"></script>
+    <!-- Script Controller JS -->
+    <script src="assets/app.js?v=3.4"></script>
 </body>
 </html>

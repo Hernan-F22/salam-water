@@ -48,6 +48,30 @@ CREATE TABLE IF NOT EXISTS `pengeluaran` (
         ON UPDATE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+-- 4. TABEL: pesanan
+-- Menyimpan pesanan dari pelanggan online / tamu tanpa login
+CREATE TABLE IF NOT EXISTS `pesanan` (
+    `id` INT AUTO_INCREMENT PRIMARY KEY,
+    `nomor_pesanan` VARCHAR(30) NOT NULL UNIQUE,
+    `tanggal` DATE NOT NULL,
+    `nama_pelanggan` VARCHAR(100) NOT NULL,
+    `no_hp` VARCHAR(25) NOT NULL,
+    `alamat` TEXT NOT NULL,
+    `jenis_galon` ENUM('isi_ulang', 'galon_baru') NOT NULL DEFAULT 'isi_ulang',
+    `harga_satuan` DECIMAL(12, 2) NOT NULL DEFAULT 5000.00,
+    `jumlah_galon` INT NOT NULL DEFAULT 1,
+    `total` DECIMAL(12, 2) NOT NULL DEFAULT 5000.00,
+    `metode_pembayaran` ENUM('tunai', 'transfer', 'qris') NOT NULL DEFAULT 'tunai',
+    `status` ENUM('menunggu', 'diproses', 'selesai', 'dibatalkan') NOT NULL DEFAULT 'menunggu',
+    `catatan` VARCHAR(255) NULL,
+    `id_transaksi_penjualan` INT NULL,
+    `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    INDEX `idx_pesanan_nomor` (`nomor_pesanan`),
+    INDEX `idx_pesanan_nohp` (`no_hp`),
+    INDEX `idx_pesanan_status` (`status`),
+    INDEX `idx_pesanan_tanggal` (`tanggal`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 -- ==========================================================
 -- SEED DATA AWAL: Kategori Pengeluaran Standar Depot Air
 -- ==========================================================

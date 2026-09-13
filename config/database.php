@@ -1,4 +1,5 @@
 <?php
+
 /**
  * Konfigurasi Koneksi Database MySQL (PDO)
  * Kompatibel dengan Local XAMPP dan Serverless Vercel (Cloud DB)
@@ -20,7 +21,8 @@ $db_port = getenv('DB_PORT') ?: ($_ENV['DB_PORT'] ?? '3306');
  * Mendapatkan instance koneksi PDO MySQL
  * @return PDO
  */
-function get_db_connection() {
+function get_db_connection()
+{
     global $db_host, $db_user, $db_pass, $db_name, $db_port;
     static $pdo = null;
 
@@ -29,7 +31,7 @@ function get_db_connection() {
     }
 
     $dsn = "mysql:host={$db_host};port={$db_port};dbname={$db_name};charset=utf8mb4";
-    
+
     $options = [
         PDO::ATTR_ERRMODE            => PDO::ERRMODE_EXCEPTION,
         PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
@@ -54,7 +56,8 @@ function get_db_connection() {
  * @param string $message Pesan respons
  * @param int $http_code HTTP status code
  */
-function json_response($success, $data = null, $message = '', $http_code = 200) {
+function json_response($success, $data = null, $message = '', $http_code = 200)
+{
     if (!headers_sent()) {
         http_response_code($http_code);
         header('Content-Type: application/json; charset=utf-8');
@@ -76,7 +79,8 @@ function json_response($success, $data = null, $message = '', $http_code = 200) 
  * Helper untuk membaca input request JSON (POST/PUT/DELETE)
  * @return array
  */
-function get_json_input() {
+function get_json_input()
+{
     $raw = file_get_contents('php://input');
     if (empty($raw)) {
         return $_POST ?: [];
@@ -94,4 +98,88 @@ if (isset($_SERVER['REQUEST_METHOD']) && $_SERVER['REQUEST_METHOD'] === 'OPTIONS
     header('Access-Control-Allow-Headers: Content-Type, Authorization, X-Requested-With');
     http_response_code(200);
     exit;
+}
+
+// ==========================================================
+// KONFIGURASI AUTENTIKASI ADMIN
+// ==========================================================
+define('ADMIN_USERNAME', 'adminwater');
+define('ADMIN_PASSWORD', '22Febuary$');
+define('AUTH_SECRET', getenv('APP_SECRET') ?: 'salam_water_secret_key_2026');
+
+/**
+ * Generate Signed Token untuk Sesi Admin (Stateless & Serverless Friendly)
+ * @param string $username
+ * @return string
+ */
+function generate_admin_token($username) {
+    $payload = base64_encode(json_encode([
+        'user' => $username,
+        'role' => 'admin',
+        'time' => time(),
+        'exp'  => time() + (86400 * 7) // Berlaku 7 hari
+    ]));
+    $signature = hash_hmac('sha256', $payload, AUTH_SECRET);
+    return $payload . '.' . $signature;
+}
+
+/**
+ * Verifikasi Token Admin dari Header Authorization
+ * @param string|null $token
+ * @return array|false
+ */
+function verify_admin_token($token = null) {
+    if ($token === null) {
+        $auth_header = '';
+        if (isset($_SERVER['HTTP_AUTHORIZATION'])) {
+            $auth_header = $_SERVER['HTTP_AUTHORIZATION'];
+        } elseif (isset($_SERVER['REDIRECT_HTTP_AUTHORIZATION'])) {
+            $auth_header = $_SERVER['REDIRECT_HTTP_AUTHORIZATION'];
+        } elseif (function_exists('apache_request_headers')) {
+            $headers = apache_request_headers();
+            $auth_header = $headers['Authorization'] ?? ($headers['authorization'] ?? '');
+        }
+        if (preg_match('/Bearer\s+(.*)$/i', $auth_header, $matches)) {
+            $token = trim($matches[1]);
+        }
+    }
+
+    if (empty($token)) {
+        return false;
+    }
+
+    $parts = explode('.', $token);
+    if (count($parts) !== 2) {
+        return false;
+    }
+
+    list($payload_b64, $signature) = $parts;
+    $expected_sig = hash_hmac('sha256', $payload_b64, AUTH_SECRET);
+    if (!hash_equals($expected_sig, $signature)) {
+        return false;
+    }
+
+    $data = json_decode(base64_decode($payload_b64), true);
+    if (!is_array($data) || empty($data['user']) || $data['user'] !== ADMIN_USERNAME) {
+        return false;
+    }
+
+    if (isset($data['exp']) && time() > $data['exp']) {
+        return false;
+    }
+
+    return $data;
+}
+
+/**
+ * Middleware Proteksi Endpoint: Hanya Admin yang Diizinkan
+ * @return array
+ */
+function require_admin_auth() {
+    $auth = verify_admin_token();
+    if (!$auth) {
+        json_response(false, null, 'Akses ditolak. Silakan login sebagai admin untuk mengakses data ini.', 401);
+        exit;
+    }
+    return $auth;
 }

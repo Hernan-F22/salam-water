@@ -18,10 +18,12 @@ switch ($type) {
         break;
 
     case 'penjualan':
+        require_admin_auth();
         handle_penjualan($pdo, $method);
         break;
 
     case 'pengeluaran':
+        require_admin_auth();
         handle_pengeluaran($pdo, $method);
         break;
 
@@ -115,7 +117,7 @@ function handle_penjualan($pdo, $method) {
                 json_response(false, null, 'Harga satuan tidak boleh negatif.', 422);
             }
             if (!in_array($metode_pembayaran, ['tunai', 'transfer', 'qris'])) {
-                json_response(false, null, 'Metode pembayaran tidak valid.', 422);
+                $metode_pembayaran = 'tunai';
             }
 
             // Hitung total otomatis di server untuk memastikan integritas data

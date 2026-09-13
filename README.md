@@ -7,22 +7,25 @@ Aplikasi web modern, responsif, dan serverless-ready untuk manajemen keuangan da
 ## 🚀 Ringkasan Fitur
 
 1. **Dashboard Ringkasan Real-Time**:
+1. **Portal Pemesanan Publik (Pelanggan / Tamu)**:
+   - Pelanggan dapat memesan air isi ulang & galon baru secara online tanpa harus login.
+   - Pilihan tarif resmi depot: Rp 5.000, Rp 6.000, Rp 22.000, dan Rp 65.000.
+   - Pelacakan status pesanan secara real-time (Menunggu, Diproses, Selesai, Dibatalkan).
+   - Tombol konfirmasi otomatis ke WhatsApp pengelola depot.
+
+2. **Panel Admin Terproteksi**:
+   - Autentikasi khusus pengelola depot:
+     - **Username**: `adminwater`
+     - **Password**: `22Febuary$`
+   - Antrean Pesanan Masuk: Pengelola dapat memproses atau menyelesaikan pesanan.
+   - **Otomatisasi Kas**: Pesanan yang diselesaikan otomatis tercatat ke dalam penjualan kas dan laporan keuangan.
+
+3. **Dashboard & Laporan Finansial (Khusus Admin)**:
    - Total omzet/pemasukan hari ini, bulan ini, dan tahun ini.
    - Akumulasi penjualan galon (breakdown isi ulang biasa vs galon baru).
    - Total pengeluaran operasional (tutup galon, tisu, air tangki sumber, token listrik, dll).
    - Kalkulasi otomatis laba bersih (`Pemasukan - Pengeluaran`).
-   - Grafik persentase pengeluaran per kategori & persebaran metode pembayaran (Tunai, QRIS, Transfer).
-
-2. **Manajemen Transaksi**:
-   - Pencatatan transaksi penjualan dengan kalkulasi subtotal instan.
-   - Preset tombol cepat untuk kuantitas (+1, +5, +10) dan harga satuan (Rp 5.000, Rp 6.000, Rp 22.000, Rp 65.000).
-   - Pencatatan pengeluaran operasional terhubung dengan kategori database.
-   - Riwayat data tabel lengkap dengan fitur hapus transaksi.
-
-3. **Laporan Keuangan & Buku Kas (Print Ready)**:
-   - Filter periode fleksibel (Hari Ini, 7 Hari Terakhir, Bulan Ini, Bulan Lalu, atau Kustom Tanggal).
-   - Rekapitulasi buku kas kronologis dengan saldo berjalan (running balance).
-   - Mode Cetak / Export PDF (`@media print`) yang otomatis memformat laporan resmi dengan kop surat depot dan kolom tanda tangan penanggung jawab.
+   - Laporan buku kas kronologis dengan saldo berjalan (running balance) dan format ramah cetak (`@media print`).
 
 ---
 
@@ -31,16 +34,19 @@ Aplikasi web modern, responsif, dan serverless-ready untuk manajemen keuangan da
 ```text
 web_water/
 ├── api/
-│   ├── transaksi.php         # Endpoint REST API: CRUD penjualan, pengeluaran & kategori
-│   └── laporan.php           # Endpoint REST API: Agregasi ringkasan dashboard & buku kas
+│   ├── auth.php              # Endpoint REST API: Autentikasi sesi Admin
+│   ├── pesanan.php           # Endpoint REST API: Pemesanan online & kelola antrean order
+│   ├── transaksi.php         # Endpoint REST API: CRUD penjualan kasir & pengeluaran operasional
+│   └── laporan.php           # Endpoint REST API: Agregasi ringkasan finansial & buku kas
 ├── assets/
-│   ├── style.css             # Desain dashboard responsif modern & Print CSS (@media print)
-│   └── app.js               # Frontend controller Vanilla JS (AJAX Fetch API, kalkulasi realtime)
+│   ├── favicon.svg           # Logo ikon tab browser & branding header
+│   ├── style.css             # Desain responsif, portal pesan, modal login & print CSS
+│   └── app.js               # Frontend controller: Sesi login, AJAX pemesanan, kasir & print
 ├── config/
-│   └── database.php          # Koneksi database MySQL PDO berbasis Environment Variables
-├── schema.sql                # Skema DDL tabel MySQL + data awal kategori & contoh transaksi
+│   └── database.php          # Koneksi database PDO MySQL & helper verifikasi auth token
+├── schema.sql                # Skema DDL tabel MySQL + tabel pesanan + seed data
 ├── vercel.json               # Konfigurasi deployment serverless PHP untuk Vercel
-├── index.html                # Tampilan UI Dashboard utama (Static Single Page Frontend)
+├── index.html                # Tampilan UI utama (Portal Pemesanan + Dashboard Admin)
 └── README.md                 # Dokumentasi proyek & panduan deployment
 ```
 

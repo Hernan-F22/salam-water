@@ -7,6 +7,9 @@
 
 require_once __DIR__ . '/../config/database.php';
 
+// Lindungi endpoint laporan finansial hanya untuk admin
+require_admin_auth();
+
 $pdo = get_db_connection();
 $action = isset($_GET['action']) ? trim($_GET['action']) : 'dashboard';
 

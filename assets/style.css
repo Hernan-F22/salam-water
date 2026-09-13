@@ -1,3 +1,5 @@
+@charset "UTF-8";
+
 /* ==========================================================================
    SALAM WATER - MODERN CLEAN DASHBOARD & PRINT READY CSS
    Tema: Fresh Water (Hydro Blue & Clean Minimalist)
@@ -67,6 +69,45 @@ body {
   max-width: 1280px;
   margin: 0 auto;
   padding: 0 1.25rem;
+}
+
+/* ==========================================================================
+   ROLE VISIBILITY HELPERS (HIGH PRIORITY)
+   ========================================================================== */
+body:not(.role-admin) .admin-only {
+  display: none !important;
+}
+
+body.role-admin .guest-only {
+  display: none !important;
+}
+
+body.role-admin .header-admin-tools.admin-only {
+  display: flex !important;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+body.role-admin button.nav-btn.admin-only,
+body.role-admin .nav-btn.admin-only {
+  display: flex !important;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+body.role-admin button.btn.admin-only,
+body.role-admin a.btn.admin-only {
+  display: inline-flex !important;
+}
+
+body.role-admin tr.admin-only {
+  display: table-row !important;
+}
+
+body.role-admin th.admin-only,
+body.role-admin td.admin-only {
+  display: table-cell !important;
 }
 
 /* ==========================================================================
@@ -198,12 +239,12 @@ body {
 }
 
 .tab-pane {
-  display: none;
+  display: none !important;
   animation: fadeIn 0.25s ease-in-out;
 }
 
 .tab-pane.active {
-  display: block;
+  display: block !important;
 }
 
 @keyframes fadeIn {
@@ -907,11 +948,16 @@ textarea.form-control {
   .header-inner {
     flex-direction: column;
     align-items: flex-start;
+    gap: 0.75rem;
   }
 
   .header-meta {
     width: 100%;
+    display: flex;
     justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 0.6rem;
   }
 
   .stats-grid {
@@ -929,4 +975,335 @@ textarea.form-control {
   .filter-item {
     width: 100%;
   }
+}
+
+@media (max-width: 520px) {
+  .badge-live-date {
+    font-size: 0.75rem;
+    padding: 0.25rem 0.6rem;
+  }
+
+  .brand-title {
+    font-size: 1.2rem;
+  }
+
+  .brand-subtitle {
+    font-size: 0.75rem;
+  }
+
+  .modal-backdrop {
+    align-items: flex-start;
+    padding: 1.5rem 0.75rem;
+  }
+
+  .modal-box {
+    margin: 0 auto;
+    max-height: none;
+  }
+
+  .login-card-header {
+    padding: 1.25rem 1rem;
+  }
+
+  .login-card-body {
+    padding: 1.25rem 1rem;
+  }
+}
+
+/* ==========================================================================
+   PORTAL PEMESANAN PUBLIK & STATUS ORDER
+   ========================================================================== */
+.hero-order {
+  background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%);
+  border-radius: var(--radius-lg);
+  padding: 2.25rem;
+  color: #ffffff;
+  margin-bottom: 1.75rem;
+  box-shadow: var(--shadow-md);
+  position: relative;
+  overflow: hidden;
+}
+
+.hero-order::after {
+  content: '\1F4A7';
+  position: absolute;
+  right: 1.5rem;
+  bottom: -1rem;
+  font-size: 8rem;
+  opacity: 0.15;
+  pointer-events: none;
+}
+
+.hero-title {
+  font-size: 1.65rem;
+  font-weight: 800;
+  margin-bottom: 0.5rem;
+  line-height: 1.25;
+}
+
+.hero-desc {
+  font-size: 0.95rem;
+  opacity: 0.92;
+  max-width: 650px;
+}
+
+/* Status Badges */
+.badge-menunggu {
+  background-color: #fef3c7;
+  color: #92400e;
+  border: 1px solid #fde68a;
+}
+
+.badge-diproses {
+  background-color: #e0f2fe;
+  color: #0369a1;
+  border: 1px solid #bae6fd;
+}
+
+.badge-selesai {
+  background-color: #d1fae5;
+  color: #065f46;
+  border: 1px solid #a7f3d0;
+}
+
+.badge-dibatalkan {
+  background-color: #fee2e2;
+  color: #991b1b;
+  border: 1px solid #fecaca;
+}
+
+.badge-counter {
+  background-color: var(--danger);
+  color: #ffffff;
+  border-radius: var(--radius-full);
+  padding: 0.1rem 0.45rem;
+  font-size: 0.72rem;
+  font-weight: 800;
+  margin-left: 0.35rem;
+}
+
+/* Radio Card Choice for Products */
+.product-radio-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 0.75rem;
+  margin-top: 0.4rem;
+}
+
+.product-radio-card {
+  position: relative;
+  border: 2px solid var(--border-color);
+  border-radius: var(--radius-md);
+  padding: 0.85rem;
+  cursor: pointer;
+  transition: var(--transition);
+  background: #ffffff;
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+.product-radio-card:hover {
+  border-color: #93c5fd;
+  transform: translateY(-1px);
+}
+
+.product-radio-card.active {
+  border-color: var(--primary);
+  background-color: #f0f9ff;
+  box-shadow: 0 0 0 1px var(--primary);
+}
+
+.product-radio-title {
+  font-weight: 700;
+  font-size: 0.92rem;
+  color: var(--text-main);
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.product-radio-price {
+  font-size: 1.15rem;
+  font-weight: 800;
+  color: var(--primary);
+}
+
+.product-radio-desc {
+  font-size: 0.76rem;
+  color: var(--text-muted);
+}
+
+/* ==========================================================================
+   RESPONSIVE LOGIN CARD & MODAL DIALOG
+   ========================================================================== */
+
+/* Login Card Container (Untuk Tab Login Dedikasi) */
+.login-card-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 1rem 0;
+  width: 100%;
+}
+
+.login-card {
+  background: #ffffff;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  max-width: 440px;
+  width: 100%;
+  box-shadow: var(--shadow-md);
+  overflow: hidden;
+  transition: var(--transition);
+}
+
+.login-card-header {
+  background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%);
+  color: #ffffff;
+  padding: 1.75rem 1.5rem;
+  text-align: center;
+}
+
+.login-card-icon {
+  font-size: 2.5rem;
+  margin-bottom: 0.35rem;
+}
+
+.login-card-title {
+  font-size: 1.25rem;
+  font-weight: 800;
+  color: #ffffff;
+  letter-spacing: -0.01em;
+}
+
+.login-card-subtitle {
+  font-size: 0.82rem;
+  color: rgba(255, 255, 255, 0.9);
+  margin-top: 0.25rem;
+}
+
+.login-card-body {
+  padding: 1.75rem 1.5rem;
+}
+
+/* Password Input with Eye Button */
+.input-pass-wrapper {
+  position: relative;
+  width: 100%;
+}
+
+.input-pass-wrapper input.form-control {
+  padding-right: 2.75rem;
+}
+
+.btn-toggle-eye {
+  position: absolute;
+  right: 0.5rem;
+  top: 50%;
+  transform: translateY(-50%);
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  font-size: 1.15rem;
+  color: var(--text-muted);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.35rem;
+  border-radius: var(--radius-sm);
+  transition: var(--transition);
+}
+
+.btn-toggle-eye:hover {
+  color: var(--primary);
+  background: var(--secondary-light);
+}
+
+/* Modal Dialog */
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(15, 23, 42, 0.65);
+  backdrop-filter: blur(4px);
+  display: none;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 1rem;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.modal-backdrop.open {
+  display: flex !important;
+}
+
+.modal-box {
+  background: #ffffff;
+  border-radius: var(--radius-lg);
+  max-width: 440px;
+  width: 100%;
+  margin: auto;
+  box-shadow: var(--shadow-lg);
+  overflow: hidden;
+  max-height: calc(100vh - 2rem);
+  display: flex;
+  flex-direction: column;
+  animation: modalPop 0.22s ease-out;
+}
+
+@keyframes modalPop {
+  from { opacity: 0; transform: scale(0.96) translateY(12px); }
+  to { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+.modal-header {
+  padding: 1.15rem 1.35rem;
+  border-bottom: 1px solid var(--border-color);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: #f8fafc;
+  flex-shrink: 0;
+}
+
+.modal-title {
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: var(--text-main);
+}
+
+.btn-close-modal {
+  background: transparent;
+  border: none;
+  font-size: 1.35rem;
+  color: var(--text-muted);
+  cursor: pointer;
+  padding: 0.25rem 0.5rem;
+  border-radius: var(--radius-sm);
+  line-height: 1;
+}
+
+.btn-close-modal:hover {
+  color: var(--danger);
+  background: var(--danger-light);
+}
+
+.modal-body {
+  padding: 1.35rem;
+  overflow-y: auto;
+}
+
+/* WhatsApp Button */
+.btn-whatsapp {
+  background-color: #25d366;
+  color: #ffffff;
+}
+
+.btn-whatsapp:hover {
+  background-color: #1eb954;
+  color: #ffffff;
 }
