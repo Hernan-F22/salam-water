@@ -10,23 +10,63 @@
 error_reporting(E_ALL);
 ini_set('display_errors', '0'); // Tetap matikan display error agar tidak merusak output JSON
 
-// Mengambil variabel environment dengan fallback ke konfigurasi lokal XAMPP
-$db_host = getenv('DB_HOST') ?: ($_ENV['DB_HOST'] ?? '127.0.0.1');
-$db_user = getenv('DB_USER') ?: ($_ENV['DB_USER'] ?? 'root');
-$db_pass = getenv('DB_PASS') !== false ? getenv('DB_PASS') : ($_ENV['DB_PASS'] ?? '');
-$db_name = getenv('DB_NAME') ?: ($_ENV['DB_NAME'] ?? 'salam_water');
-$db_port = getenv('DB_PORT') ?: ($_ENV['DB_PORT'] ?? '3306');
-$db_ssl  = getenv('DB_SSL') ?: ($_ENV['DB_SSL'] ?? '');
+// Helper membaca Environment Variable dari $_SERVER, $_ENV, maupun getenv()
+function get_config_env($key, $default = null)
+{
+    if (isset($_SERVER[$key]) && $_SERVER[$key] !== '') {
+        return $_SERVER[$key];
+    }
+    if (isset($_ENV[$key]) && $_ENV[$key] !== '') {
+        return $_ENV[$key];
+    }
+    $val = getenv($key);
+    if ($val !== false && $val !== '') {
+        return $val;
+    }
+    return $default;
+}
 
-// Dukungan parsing otomatis jika menggunakan format DATABASE_URL (Railway / Aiven / Supabase)
-if ($db_url = (getenv('DATABASE_URL') ?: ($_ENV['DATABASE_URL'] ?? ''))) {
+// Mengambil variabel environment dengan fallback ke konfigurasi lokal XAMPP
+$db_host = get_config_env('DB_HOST')
+    ?: get_config_env('MYSQL_HOST')
+    ?: get_config_env('TIDB_HOST')
+    ?: '127.0.0.1';
+
+$db_user = get_config_env('DB_USER')
+    ?: get_config_env('MYSQL_USER')
+    ?: get_config_env('TIDB_USER')
+    ?: 'root';
+
+$db_pass = get_config_env('DB_PASS');
+if ($db_pass === null) $db_pass = get_config_env('DB_PASSWORD');
+if ($db_pass === null) $db_pass = get_config_env('MYSQL_PASSWORD');
+if ($db_pass === null) $db_pass = get_config_env('TIDB_PASSWORD');
+if ($db_pass === null) $db_pass = '';
+
+$db_name = get_config_env('DB_NAME')
+    ?: get_config_env('MYSQL_DATABASE')
+    ?: get_config_env('TIDB_DATABASE')
+    ?: 'salam_water';
+
+$db_port = get_config_env('DB_PORT')
+    ?: get_config_env('MYSQL_PORT')
+    ?: get_config_env('TIDB_PORT')
+    ?: '3306';
+
+$db_ssl  = get_config_env('DB_SSL')
+    ?: get_config_env('MYSQL_SSL')
+    ?: '';
+
+// Dukungan parsing otomatis jika menggunakan format DATABASE_URL / MYSQL_URL (TiDB / Railway / Aiven / Supabase)
+if ($db_url = (get_config_env('DATABASE_URL') ?: get_config_env('MYSQL_URL'))) {
     $parsed = parse_url($db_url);
     if ($parsed) {
-        $db_host = $parsed['host'] ?? $db_host;
-        $db_port = $parsed['port'] ?? $db_port;
-        $db_user = $parsed['user'] ?? $db_user;
-        $db_pass = $parsed['pass'] ?? $db_pass;
-        $db_name = isset($parsed['path']) ? ltrim($parsed['path'], '/') : $db_name;
+        if (!empty($parsed['host'])) $db_host = $parsed['host'];
+        if (!empty($parsed['port'])) $db_port = (string)$parsed['port'];
+        if (!empty($parsed['user'])) $db_user = urldecode($parsed['user']);
+        if (isset($parsed['pass']))  $db_pass = urldecode($parsed['pass']);
+        if (!empty($parsed['path'])) $db_name = ltrim($parsed['path'], '/');
+        $db_ssl = 'true';
     }
 }
 
@@ -54,7 +94,12 @@ function get_db_connection()
 
     // Aktifkan mode SSL/TLS jika menggunakan cloud provider (TiDB Cloud, Aiven, dll)
     // TiDB Serverless mewajibkan koneksi terenkripsi (TLS)
-    $is_cloud = ($db_ssl === 'true' || $db_ssl === '1' || (int)$db_port === 4000 || strpos($db_host, 'tidbcloud.com') !== false || strpos($db_host, 'aivencloud.com') !== false);
+    $host_lower = strtolower($db_host);
+    $is_cloud = ($db_ssl === 'true' || $db_ssl === '1'
+        || (int)$db_port === 4000
+        || strpos($host_lower, 'tidbcloud.com') !== false
+        || strpos($host_lower, 'aivencloud.com') !== false
+        || strpos($host_lower, 'rlwy.net') !== false);
 
     if ($is_cloud) {
         $ca_file = __DIR__ . '/cacert.pem';
@@ -73,11 +118,13 @@ function get_db_connection()
         $pdo = new PDO($dsn, $db_user, $db_pass, $options);
         return $pdo;
     } catch (PDOException $e) {
-        $is_vercel = getenv('VERCEL') || isset($_ENV['VERCEL']);
-        $msg = 'Gagal terhubung ke database: ' . $e->getMessage();
+        $is_vercel = get_config_env('VERCEL') !== null;
+        $err_msg = $e->getMessage();
 
         if ($is_vercel && ($db_host === '127.0.0.1' || $db_host === 'localhost')) {
-            $msg = 'Database Cloud belum terhubung di Vercel. Harap atur DB_HOST, DB_USER, DB_PASS, DB_NAME di Vercel Environment Variables.';
+            $msg = 'Database Cloud belum terhubung di Vercel. Pastikan Environment Variables (DB_HOST, DB_USER, DB_PASS, DB_NAME, DB_PORT) sudah diisi di menu Settings > Environment Variables Vercel, kemudian lakukan REDEPLOY pada deployment terbaru.';
+        } else {
+            $msg = 'Gagal terhubung ke database [' . htmlspecialchars($db_host) . ':' . htmlspecialchars($db_port) . ']: ' . $err_msg;
         }
 
         json_response(false, null, $msg, 500);
@@ -148,7 +195,8 @@ define('AUTH_SECRET', getenv('APP_SECRET') ?: 'salam_water_secret_key_2026');
  * @param string $username
  * @return string
  */
-function generate_admin_token($username) {
+function generate_admin_token($username)
+{
     $payload = base64_encode(json_encode([
         'user' => $username,
         'role' => 'admin',
@@ -164,7 +212,8 @@ function generate_admin_token($username) {
  * @param string|null $token
  * @return array|false
  */
-function verify_admin_token($token = null) {
+function verify_admin_token($token = null)
+{
     if ($token === null) {
         $auth_header = '';
         if (isset($_SERVER['HTTP_AUTHORIZATION'])) {
@@ -211,7 +260,8 @@ function verify_admin_token($token = null) {
  * Middleware Proteksi Endpoint: Hanya Admin yang Diizinkan
  * @return array
  */
-function require_admin_auth() {
+function require_admin_auth()
+{
     $auth = verify_admin_token();
     if (!$auth) {
         json_response(false, null, 'Akses ditolak. Silakan login sebagai admin untuk mengakses data ini.', 401);

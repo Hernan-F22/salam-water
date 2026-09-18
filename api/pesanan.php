@@ -1,4 +1,5 @@
 <?php
+
 /**
  * REST API Endpoint: Pemesanan Galon Online (Publik/Tamu & Manajemen Admin)
  * File: api/pesanan.php
@@ -35,10 +36,10 @@ if ($action === 'update_status') {
 }
 
 /**
- * Handle Pembuatan Pesanan Baru (Khusus Admin)
+ * Handle Pembuatan Pesanan Baru (Publik / Tamu / Pelanggan)
  */
-function handle_create_pesanan($pdo) {
-    require_admin_auth();
+function handle_create_pesanan($pdo)
+{
     $input = get_json_input();
 
     $nama = isset($input['nama_pelanggan']) ? trim($input['nama_pelanggan']) : '';
@@ -80,7 +81,7 @@ function handle_create_pesanan($pdo) {
     }
 
     $total = (float)($jumlah_galon * $harga_satuan);
-    
+
     // Generate nomor pesanan unik misal: ORD-20260913-A1B2
     $nomor_pesanan = 'ORD-' . date('Ymd') . '-' . strtoupper(substr(bin2hex(random_bytes(2)), 0, 4));
 
@@ -118,13 +119,13 @@ function handle_create_pesanan($pdo) {
         $layanan_label = ((float)$harga_satuan == 5000.00) ? '🏪 Ambil Sendiri di Depot' : '🚚 Pesan Antar ke Alamat';
         $jenis_label = $jenis_galon === 'isi_ulang' ? 'Isi Ulang Air' : 'Galon Baru';
         $wa_text = "Halo Salam Water, saya mau konfirmasi pesanan:\n"
-                 . "No Pesanan: *{$nomor_pesanan}*\n"
-                 . "Nama: *{$nama}*\n"
-                 . "Layanan: *{$layanan_label}*\n"
-                 . "Pesanan: {$jumlah_galon}x {$jenis_label} (@ Rp " . number_format($harga_satuan, 0, ',', '.') . ")\n"
-                 . "Total: Rp " . number_format($total, 0, ',', '.') . "\n"
-                 . ((float)$harga_satuan == 5000.00 ? "Info Ambil: {$alamat}\n" : "Alamat Antar: {$alamat}\n")
-                 . "Metode Bayar: " . strtoupper($metode_pembayaran) . " (CASH)";
+            . "No Pesanan: *{$nomor_pesanan}*\n"
+            . "Nama: *{$nama}*\n"
+            . "Layanan: *{$layanan_label}*\n"
+            . "Pesanan: {$jumlah_galon}x {$jenis_label} (@ Rp " . number_format($harga_satuan, 0, ',', '.') . ")\n"
+            . "Total: Rp " . number_format($total, 0, ',', '.') . "\n"
+            . ((float)$harga_satuan == 5000.00 ? "Info Ambil: {$alamat}\n" : "Alamat Antar: {$alamat}\n")
+            . "Metode Bayar: " . strtoupper($metode_pembayaran) . " (CASH)";
 
         $wa_url_1 = "https://wa.me/6287879996392?text=" . rawurlencode($wa_text);
         $wa_url_2 = "https://wa.me/6285659719922?text=" . rawurlencode($wa_text);
@@ -147,7 +148,6 @@ function handle_create_pesanan($pdo) {
             'wa_url_1'      => $wa_url_1,
             'wa_url_2'      => $wa_url_2
         ], 'Pesanan Anda berhasil dikirim! Depot Salam Water akan segera memproses.', 201);
-
     } catch (PDOException $e) {
         json_response(false, null, 'Gagal membuat pesanan: ' . $e->getMessage(), 500);
     }
@@ -156,7 +156,8 @@ function handle_create_pesanan($pdo) {
 /**
  * Handle Mengambil Pesanan (Khusus Admin)
  */
-function handle_get_pesanan($pdo) {
+function handle_get_pesanan($pdo)
+{
     require_admin_auth();
 
     try {
@@ -201,7 +202,6 @@ function handle_get_pesanan($pdo) {
             'orders' => $orders,
             'stats'  => $stats
         ], 'Daftar seluruh pesanan berhasil dimuat.');
-
     } catch (PDOException $e) {
         json_response(false, null, 'Gagal mengambil data pesanan: ' . $e->getMessage(), 500);
     }
@@ -210,7 +210,8 @@ function handle_get_pesanan($pdo) {
 /**
  * Handle Update Status Pesanan (Khusus Admin)
  */
-function handle_update_status($pdo, $method) {
+function handle_update_status($pdo, $method)
+{
     if ($method !== 'POST') {
         json_response(false, null, 'Metode HTTP harus POST untuk memperbarui status.', 405);
     }
@@ -287,7 +288,6 @@ function handle_update_status($pdo, $method) {
             'status'                 => $status_baru,
             'id_transaksi_penjualan' => $id_transaksi_penjualan
         ], "Status pesanan #{$order['nomor_pesanan']} berhasil diubah menjadi " . strtoupper($status_baru));
-
     } catch (PDOException $e) {
         json_response(false, null, 'Gagal memperbarui status pesanan: ' . $e->getMessage(), 500);
     }
@@ -296,7 +296,8 @@ function handle_update_status($pdo, $method) {
 /**
  * Handle Hapus Pesanan (Khusus Admin)
  */
-function handle_delete_pesanan($pdo, $method) {
+function handle_delete_pesanan($pdo, $method)
+{
     if (!in_array($method, ['POST', 'DELETE'])) {
         json_response(false, null, 'Metode HTTP harus POST atau DELETE untuk menghapus pesanan.', 405);
     }
@@ -334,7 +335,6 @@ function handle_delete_pesanan($pdo, $method) {
         $pdo->commit();
 
         json_response(true, ['id' => $id], "Pesanan #{$order['nomor_pesanan']} berhasil dihapus.");
-
     } catch (PDOException $e) {
         if ($pdo->inTransaction()) {
             $pdo->rollBack();
@@ -342,4 +342,3 @@ function handle_delete_pesanan($pdo, $method) {
         json_response(false, null, 'Gagal menghapus pesanan: ' . $e->getMessage(), 500);
     }
 }
-

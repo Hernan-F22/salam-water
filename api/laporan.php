@@ -1,4 +1,5 @@
 <?php
+
 /**
  * REST API Endpoint: Laporan Keuangan & Ringkasan Dashboard
  * Aplikasi: Salam Water - Depot Air Minum Isi Ulang
@@ -30,7 +31,8 @@ switch ($action) {
 /**
  * Ringkasan Statistik untuk Dashboard
  */
-function get_dashboard_summary($pdo) {
+function get_dashboard_summary($pdo)
+{
     try {
         $today = date('Y-m-d');
         $first_day_month = date('Y-m-01');
@@ -38,7 +40,7 @@ function get_dashboard_summary($pdo) {
         $first_day_year = date('Y-01-01');
 
         // Helper fungsi query agregasi penjualan
-        $get_sales_agg = function($start_date, $end_date) use ($pdo) {
+        $get_sales_agg = function ($start_date, $end_date) use ($pdo) {
             $stmt = $pdo->prepare("
                 SELECT 
                     COALESCE(SUM(total), 0) AS total_omzet,
@@ -56,7 +58,7 @@ function get_dashboard_summary($pdo) {
         };
 
         // Helper fungsi query agregasi pengeluaran
-        $get_expense_agg = function($start_date, $end_date) use ($pdo) {
+        $get_expense_agg = function ($start_date, $end_date) use ($pdo) {
             $stmt = $pdo->prepare("
                 SELECT 
                     COALESCE(SUM(nominal), 0) AS total_pengeluaran,
@@ -141,7 +143,7 @@ function get_dashboard_summary($pdo) {
                 'galon_isi_ulang' => (int)$sales_month['galon_isi_ulang'],
                 'galon_baru'      => (int)$sales_month['galon_baru'],
                 'omzet_isi_ulang' => (float)$sales_month['omzet_isi_ulang'],
-                'omzet_galon_baru'=> (float)$sales_month['omzet_galon_baru']
+                'omzet_galon_baru' => (float)$sales_month['omzet_galon_baru']
             ],
             'tahun_ini' => [
                 'tahun'           => date('Y'),
@@ -167,7 +169,8 @@ function get_dashboard_summary($pdo) {
 /**
  * Laporan Arus Kas & Laba Rugi Buku Kas
  */
-function get_financial_report($pdo) {
+function get_financial_report($pdo)
+{
     try {
         // Tentukan rentang tanggal
         $start_date = !empty($_GET['start_date']) ? $_GET['start_date'] : date('Y-m-01');
@@ -226,7 +229,7 @@ function get_financial_report($pdo) {
 
         // 3. Gabungkan seluruh data dan urutkan secara kronologis (tanggal ASC, id ASC)
         $gabungan = array_merge($rows_penjualan, $rows_pengeluaran);
-        usort($gabungan, function($a, $b) {
+        usort($gabungan, function ($a, $b) {
             $cmp = strcmp($a['tanggal'], $b['tanggal']);
             if ($cmp === 0) {
                 return strcmp($a['created_at'], $b['created_at']);

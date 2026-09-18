@@ -12,13 +12,13 @@ document.addEventListener('DOMContentLoaded', () => {
 const App = {
     // State aplikasi
     state: {
-        currentTab: 'login',
+        currentTab: 'pesan',
         auth: {
             isAdmin: false,
             token: null,
             username: ''
         },
-        adminNewOrderProduct: {
+        orderProduct: {
             jenis: 'isi_ulang',
             harga: 5000
         },
@@ -34,7 +34,7 @@ const App = {
         this.initAuth();
         this.initTabs();
         this.initLiveClock();
-        this.initAdminNewOrderForm();
+        this.initPublicOrderForm();
         this.initAdminOrderFilters();
         this.initSalesCalculations();
         this.initExpenseForm();
@@ -101,11 +101,11 @@ const App = {
 
         const updateTime = () => {
             const now = new Date();
-            const options = { 
-                weekday: 'long', 
-                day: 'numeric', 
-                month: 'short', 
-                year: 'numeric' 
+            const options = {
+                weekday: 'long',
+                day: 'numeric',
+                month: 'short',
+                year: 'numeric'
             };
             const dateStr = now.toLocaleDateString('id-ID', options);
             clockEl.innerHTML = `📅 ${dateStr}`;
@@ -146,7 +146,7 @@ const App = {
         if (isAdmin) {
             body.classList.remove('role-guest');
             body.classList.add('role-admin');
-            
+
             // Muat data khusus admin
             this.loadCategories();
             this.loadAdminOrders();
@@ -155,16 +155,14 @@ const App = {
             this.loadPengeluaranList();
             this.loadLaporanData();
 
-            // Pindahkan tab ke antrean jika sebelumnya di login
-            if (this.state.currentTab === 'login' || !this.state.currentTab) {
-                this.switchTab('antrean');
-            }
+            // Pindahkan tab ke antrean saat admin aktif
+            this.switchTab('antrean');
         } else {
             body.classList.remove('role-admin');
             body.classList.add('role-guest');
 
-            // Saat logout / sesi habis, arahkan ke tab login
-            this.switchTab('login');
+            // Saat logout / sesi habis / belum login, arahkan ke tab pemesanan publik
+            this.switchTab('pesan');
         }
     },
 
@@ -192,6 +190,7 @@ const App = {
     // Inisialisasi Autentikasi UI (Tab Login Dedikasi)
     initLoginModal() {
         const btnOpen = document.getElementById('btn-open-login');
+        const btnBack = document.getElementById('btn-back-to-order');
         const btnLogout = document.getElementById('btn-logout');
 
         // Form Login Tab
@@ -206,11 +205,19 @@ const App = {
         if (btnOpen) {
             btnOpen.addEventListener('click', () => {
                 this.switchTab('login');
+                if (tabAlert) tabAlert.style.display = 'none';
                 if (tabPass && !tabPass.value) {
                     tabPass.focus();
                 } else if (tabUser) {
                     tabUser.focus();
                 }
+            });
+        }
+
+        // Klik tombol Kembali ke Formulir Pemesanan di Tab Login
+        if (btnBack) {
+            btnBack.addEventListener('click', () => {
+                this.switchTab('pesan');
             });
         }
 
@@ -292,10 +299,10 @@ const App = {
                 if (!confirm('Apakah Anda yakin ingin keluar dari akun Admin?')) return;
                 try {
                     await fetch('api/auth.php?action=logout', { method: 'POST' });
-                } catch (e) {}
+                } catch (e) { }
                 sessionStorage.removeItem('salam_water_admin_token');
                 this.setAdminState(false, null);
-                this.switchTab('login');
+                this.switchTab('pesan');
                 this.showToast('Anda telah keluar dari mode admin.');
             });
         }
@@ -350,7 +357,7 @@ const App = {
 
         const toast = document.createElement('div');
         toast.className = `toast toast-${type}`;
-        
+
         const icon = type === 'success' ? '✅' : (type === 'error' ? '❌' : 'ℹ️');
         toast.innerHTML = `<span>${icon}</span> <div>${message}</div>`;
 
@@ -364,88 +371,66 @@ const App = {
     },
 
     // ==========================================================
-    // FORM INPUT PESANAN BARU OLEH ADMIN (TELEPON / WA)
+    // FORMULIR PEMESANAN GALON (PELANGGAN TANPA LOGIN - GAMBAR 1)
     // ==========================================================
-    initAdminNewOrderForm() {
-        const btnToggle = document.getElementById('btn-toggle-new-order');
-        const btnClose = document.getElementById('btn-close-new-order');
-        const btnCancel = document.getElementById('btn-cancel-admin-order');
-        const boxNewOrder = document.getElementById('box-admin-new-order');
-        const form = document.getElementById('form-admin-new-order');
-        const dateInput = document.getElementById('admin-order-tanggal');
-        const qtyInput = document.getElementById('admin-order-jumlah');
-        const totalDisplay = document.getElementById('admin-order-total-display');
-        const radioCards = document.querySelectorAll('#box-admin-new-order .product-radio-card');
+    initPublicOrderForm() {
+        const form = document.getElementById('form-pesan-online');
+        const nameInput = document.getElementById('order-nama');
+        const phoneInput = document.getElementById('order-nohp');
+        const addressInput = document.getElementById('order-alamat');
+        const addressLabel = document.getElementById('label-order-alamat');
+        const addressHelper = document.getElementById('helper-order-alamat');
+        const qtyInput = document.getElementById('order-jumlah');
+        const notesInput = document.getElementById('order-catatan');
+        const paymentSelect = document.getElementById('order-metode');
+        const totalDisplay = document.getElementById('order-total-display');
+        const submitBtn = document.getElementById('btn-submit-order');
+        const radioCards = document.querySelectorAll('#pane-pesan .product-radio-card');
+        const boxSuccess = document.getElementById('box-order-success');
+        const successNo = document.getElementById('success-ord-no');
+        const successDetails = document.getElementById('success-ord-details');
+        const btnWa1 = document.getElementById('btn-wa-confirm-1');
+        const btnWa2 = document.getElementById('btn-wa-confirm-2');
 
-        // Set default tanggal hari ini
-        if (dateInput && !dateInput.value) {
-            const today = new Date();
-            const yyyy = today.getFullYear();
-            const mm = String(today.getMonth() + 1).padStart(2, '0');
-            const dd = String(today.getDate()).padStart(2, '0');
-            dateInput.value = `${yyyy}-${mm}-${dd}`;
-        }
-
-        // State produk pesanan admin
-        this.state.adminNewOrderProduct = {
+        // State produk pesanan default
+        this.state.orderProduct = {
             jenis: 'isi_ulang',
             harga: 5000
         };
 
-        const calculateAdminOrderTotal = () => {
+        const calculateTotal = () => {
             const qty = parseInt(qtyInput ? qtyInput.value : 1, 10) || 1;
-            const price = this.state.adminNewOrderProduct ? this.state.adminNewOrderProduct.harga : 5000;
+            const price = this.state.orderProduct ? this.state.orderProduct.harga : 5000;
             const total = qty * price;
             if (totalDisplay) {
                 totalDisplay.textContent = this.formatRupiah(total);
             }
         };
 
-        const updateAdminAddressMode = (price) => {
-            const labelEl = document.getElementById('label-admin-order-alamat');
-            const textareaEl = document.getElementById('admin-order-alamat');
-            const helperEl = document.getElementById('helper-admin-order-alamat');
-            if (!textareaEl) return;
-
+        const updateAddressMode = (price) => {
+            if (!addressInput) return;
             if (parseFloat(price) === 5000) {
-                if (labelEl) labelEl.innerHTML = '🏪 Info Pengambilan <small style="font-weight:400; color:var(--text-muted);">(Opsional - Ambil di Depot)</small>';
-                textareaEl.placeholder = 'Bisa dikosongkan (ambil sendiri di depot) atau isi estimasi jam pengambilan';
-                textareaEl.required = false;
-                if (helperEl) {
-                    helperEl.textContent = 'Tarif Rp 5.000 untuk pesanan yang diambil langsung di depot (tanpa pengantaran).';
-                    helperEl.style.color = '#4338ca';
+                if (addressLabel) addressLabel.innerHTML = '🏪 Info Pengambilan <small style="font-weight:400; color:var(--text-muted);">(Opsional - Ambil di Depot)</small>';
+                addressInput.placeholder = 'Bisa dikosongkan (ambil sendiri di depot) atau isi estimasi jam pengambilan';
+                addressInput.required = false;
+                if (addressHelper) {
+                    addressHelper.textContent = 'Tarif Rp 5.000 untuk pesanan yang diambil langsung di depot (tanpa pengantaran).';
+                    addressHelper.style.color = '#4338ca';
                 }
             } else {
-                if (labelEl) labelEl.innerHTML = '🚚 Alamat Pengantaran <span style="color:#ef4444;">*</span> <small style="font-weight:400; color:var(--text-muted);">(Pesan Antar)</small>';
-                textareaEl.placeholder = 'Contoh: Jl. Mawar No. 15 RT 02/04 (Rumah pagar hitam)';
-                textareaEl.required = true;
-                if (helperEl) {
-                    helperEl.textContent = 'Pesanan akan diantar langsung oleh kurir depot ke alamat pelanggan.';
-                    helperEl.style.color = 'var(--text-muted)';
+                if (addressLabel) addressLabel.innerHTML = '🚚 Alamat Pengantaran <span style="color:#ef4444;">*</span> <small style="font-weight:400; color:var(--text-muted);">(Pesan Antar)</small>';
+                addressInput.placeholder = 'Contoh: Jl. Mawar No. 15 RT 02/04 (Rumah pagar hitam)';
+                addressInput.required = true;
+                if (addressHelper) {
+                    addressHelper.textContent = 'Pesanan akan diantar langsung oleh kurir depot ke alamat Anda.';
+                    addressHelper.style.color = 'var(--text-muted)';
                 }
             }
         };
 
         // Inisialisasi awal kalkulasi & mode alamat
-        calculateAdminOrderTotal();
-        updateAdminAddressMode(5000);
-
-        // Toggle buka/tutup form
-        const toggleBox = (show) => {
-            if (!boxNewOrder) return;
-            const isCurrentlyHidden = boxNewOrder.style.display === 'none' || !boxNewOrder.style.display;
-            const willShow = show !== undefined ? show : isCurrentlyHidden;
-            boxNewOrder.style.display = willShow ? 'block' : 'none';
-            if (willShow) {
-                boxNewOrder.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                const nameInput = document.getElementById('admin-order-nama');
-                if (nameInput) nameInput.focus();
-            }
-        };
-
-        if (btnToggle) btnToggle.addEventListener('click', () => toggleBox());
-        if (btnClose) btnClose.addEventListener('click', () => toggleBox(false));
-        if (btnCancel) btnCancel.addEventListener('click', () => toggleBox(false));
+        calculateTotal();
+        updateAddressMode(5000);
 
         // Radio Card Selection
         radioCards.forEach(card => {
@@ -453,93 +438,129 @@ const App = {
                 radioCards.forEach(c => c.classList.remove('active'));
                 card.classList.add('active');
 
-                this.state.adminNewOrderProduct.jenis = card.dataset.jenis;
-                this.state.adminNewOrderProduct.harga = parseFloat(card.dataset.harga);
-                calculateAdminOrderTotal();
-                updateAdminAddressMode(this.state.adminNewOrderProduct.harga);
+                this.state.orderProduct.jenis = card.dataset.jenis;
+                this.state.orderProduct.harga = parseFloat(card.dataset.harga);
+                calculateTotal();
+                updateAddressMode(this.state.orderProduct.harga);
             });
         });
 
         // Quantity input & preset buttons
-        if (qtyInput) qtyInput.addEventListener('input', calculateAdminOrderTotal);
+        if (qtyInput) qtyInput.addEventListener('input', calculateTotal);
 
-        document.querySelectorAll('.btn-preset-admin-qty').forEach(btn => {
+        document.querySelectorAll('.btn-preset-order-qty').forEach(btn => {
             btn.addEventListener('click', () => {
                 if (qtyInput) {
                     qtyInput.value = btn.dataset.qty;
-                    calculateAdminOrderTotal();
+                    calculateTotal();
                 }
             });
         });
 
-        // Submit Pesanan Baru oleh Admin
+        // Submit Pesanan Pelanggan (Publik, Tanpa Login)
         if (form) {
             form.addEventListener('submit', async (e) => {
                 e.preventDefault();
-                const submitBtn = document.getElementById('btn-submit-admin-order');
-                if (submitBtn) {
-                    submitBtn.disabled = true;
-                    submitBtn.innerHTML = '⏳ Menyimpan Pesanan...';
+
+                const nama = nameInput ? nameInput.value.trim() : '';
+                const nohp = phoneInput ? phoneInput.value.trim() : '';
+                let alamat = addressInput ? addressInput.value.trim() : '';
+                const isAmbil = parseFloat(this.state.orderProduct.harga) === 5000;
+
+                if (!nama || !nohp) {
+                    this.showToast('Nama dan nomor HP/WhatsApp wajib diisi!', 'error');
+                    return;
                 }
 
-                let alamatVal = (document.getElementById('admin-order-alamat')?.value || '').trim();
-                const isAmbilDepot = parseFloat(this.state.adminNewOrderProduct.harga) === 5000;
-                if (!alamatVal && isAmbilDepot) {
-                    alamatVal = 'Ambil Sendiri di Depot';
+                if (!alamat && isAmbil) {
+                    alamat = 'Ambil Sendiri di Depot';
+                } else if (!alamat && !isAmbil) {
+                    this.showToast('Alamat pengantaran wajib diisi untuk layanan pesan antar!', 'error');
+                    if (addressInput) addressInput.focus();
+                    return;
                 }
+
+                const qty = parseInt(qtyInput ? qtyInput.value : 1, 10) || 1;
+                const today = new Date();
+                const yyyy = today.getFullYear();
+                const mm = String(today.getMonth() + 1).padStart(2, '0');
+                const dd = String(today.getDate()).padStart(2, '0');
+                const todayStr = `${yyyy}-${mm}-${dd}`;
 
                 const payload = {
-                    tanggal: document.getElementById('admin-order-tanggal')?.value || '',
-                    status: document.getElementById('admin-order-status')?.value || 'menunggu',
-                    nama_pelanggan: document.getElementById('admin-order-nama')?.value.trim() || '',
-                    no_hp: document.getElementById('admin-order-nohp')?.value.trim() || '',
-                    alamat: alamatVal,
-                    jenis_galon: this.state.adminNewOrderProduct.jenis,
-                    harga_satuan: this.state.adminNewOrderProduct.harga,
-                    jumlah_galon: parseInt(qtyInput ? qtyInput.value : 1, 10) || 1,
-                    metode_pembayaran: document.getElementById('admin-order-metode')?.value || 'tunai',
-                    catatan: (document.getElementById('admin-order-catatan')?.value || '').trim()
+                    tanggal: todayStr,
+                    status: 'menunggu',
+                    nama_pelanggan: nama,
+                    no_hp: nohp,
+                    alamat: alamat,
+                    jenis_galon: this.state.orderProduct.jenis,
+                    harga_satuan: this.state.orderProduct.harga,
+                    jumlah_galon: qty,
+                    metode_pembayaran: paymentSelect ? paymentSelect.value : 'tunai',
+                    catatan: notesInput ? notesInput.value.trim() : ''
                 };
 
+                if (submitBtn) {
+                    submitBtn.disabled = true;
+                    submitBtn.innerHTML = '⏳ Mengirim Pesanan...';
+                }
+
                 try {
-                    const res = await this.authFetch('api/pesanan.php', {
+                    const res = await fetch('api/pesanan.php', {
                         method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify(payload)
                     });
                     const result = await res.json();
 
                     if (result.success && result.data) {
-                        this.showToast(`Pesanan #${result.data.nomor_pesanan} berhasil disimpan ke antrean!`);
-                        
-                        // Reset formulir
-                        form.reset();
-                        if (dateInput) {
-                            const today = new Date();
-                            const yyyy = today.getFullYear();
-                            const mm = String(today.getMonth() + 1).padStart(2, '0');
-                            const dd = String(today.getDate()).padStart(2, '0');
-                            dateInput.value = `${yyyy}-${mm}-${dd}`;
-                        }
-                        if (qtyInput) qtyInput.value = '1';
-                        
-                        // Kembalikan pilihan default ke 5000
-                        radioCards.forEach((c, idx) => c.classList.toggle('active', idx === 0));
-                        this.state.adminNewOrderProduct = { jenis: 'isi_ulang', harga: 5000 };
-                        calculateAdminOrderTotal();
-                        updateAdminAddressMode(5000);
+                        const ord = result.data;
+                        this.showToast(`Pesanan #${ord.nomor_pesanan} berhasil dikirim!`);
 
-                        // Sembunyikan form dan reload antrean
-                        toggleBox(false);
-                        this.loadAdminOrders();
+                        // Tampilkan box sukses
+                        if (boxSuccess) {
+                            boxSuccess.style.display = 'block';
+                            if (successNo) successNo.textContent = ord.nomor_pesanan;
+                            if (successDetails) {
+                                const jenisLabel = ord.jenis_galon === 'isi_ulang' ? 'Isi Ulang Air' : 'Galon Baru';
+                                const layananLabel = parseFloat(ord.harga_satuan) === 5000 ? '🏪 Ambil di Depot' : '🚚 Pesan Antar';
+                                successDetails.innerHTML = `
+                                    <div><strong>Pelanggan:</strong> ${ord.nama} (${ord.no_hp})</div>
+                                    <div><strong>Layanan:</strong> ${layananLabel}</div>
+                                    <div><strong>Pesanan:</strong> ${ord.jumlah_galon}x ${jenisLabel} (@ ${this.formatRupiah(ord.harga_satuan)})</div>
+                                    <div><strong>Total Tagihan:</strong> <strong style="color:var(--primary); font-size:1rem;">${this.formatRupiah(ord.total)}</strong> (Tunai/Cash)</div>
+                                    <div><strong>Alamat / Info:</strong> ${ord.alamat}</div>
+                                    ${ord.catatan ? `<div><strong>Catatan:</strong> ${ord.catatan}</div>` : ''}
+                                `;
+                            }
+
+                            if (btnWa1 && ord.wa_url_1) btnWa1.href = ord.wa_url_1;
+                            if (btnWa2 && ord.wa_url_2) btnWa2.href = ord.wa_url_2;
+
+                            boxSuccess.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                        }
+
+                        // Reset formulir input text (biarkan pilihan default)
+                        if (nameInput) nameInput.value = '';
+                        if (phoneInput) phoneInput.value = '';
+                        if (addressInput) addressInput.value = '';
+                        if (notesInput) notesInput.value = '';
+                        if (qtyInput) qtyInput.value = '1';
+
+                        radioCards.forEach((c, idx) => c.classList.toggle('active', idx === 0));
+                        this.state.orderProduct = { jenis: 'isi_ulang', harga: 5000 };
+                        calculateTotal();
+                        updateAddressMode(5000);
+
                     } else {
-                        this.showToast(result.message || 'Gagal menyimpan pesanan.', 'error');
+                        this.showToast(result.message || 'Gagal mengirim pesanan.', 'error');
                     }
                 } catch (err) {
-                    this.showToast('Gagal terhubung ke server saat menyimpan pesanan.', 'error');
+                    this.showToast('Gagal terhubung ke server saat mengirim pesanan.', 'error');
                 } finally {
                     if (submitBtn) {
                         submitBtn.disabled = false;
-                        submitBtn.innerHTML = '💾 Simpan Pesanan ke Antrean';
+                        submitBtn.innerHTML = '🚀 Kirim Pesanan Sekarang';
                     }
                 }
             });
@@ -646,12 +667,12 @@ const App = {
                             `;
                         }
 
-                        const layananBadge = isAmbil 
-                            ? '<span class="badge" style="background:#e0e7ff; color:#3730a3; font-weight:700; margin-bottom:4px; display:inline-block;">🏪 Ambil di Depot</span>' 
+                        const layananBadge = isAmbil
+                            ? '<span class="badge" style="background:#e0e7ff; color:#3730a3; font-weight:700; margin-bottom:4px; display:inline-block;">🏪 Ambil di Depot</span>'
                             : '<span class="badge" style="background:#fef3c7; color:#92400e; font-weight:700; margin-bottom:4px; display:inline-block;">🚚 Pesan Antar</span>';
 
-                        const alamatTampil = isAmbil 
-                            ? (item.alamat && item.alamat !== 'Ambil Sendiri di Depot' ? item.alamat : '<span style="color:var(--text-muted);">Diambil di depot</span>') 
+                        const alamatTampil = isAmbil
+                            ? (item.alamat && item.alamat !== 'Ambil Sendiri di Depot' ? item.alamat : '<span style="color:var(--text-muted);">Diambil di depot</span>')
                             : item.alamat;
 
                         return `
@@ -691,7 +712,7 @@ const App = {
 
     async updateOrderStatus(orderId, newStatus, noPesanan = '') {
         const orderRef = noPesanan ? ` #${noPesanan}` : '';
-        const confirmMsg = newStatus === 'selesai' 
+        const confirmMsg = newStatus === 'selesai'
             ? `Konfirmasi: Selesaikan pesanan${orderRef} dan masukkan totalnya otomatis ke Transaksi Penjualan Kas?`
             : (newStatus === 'dibatalkan' ? `Batalkan pesanan${orderRef} ini?` : `Ubah status pesanan${orderRef} menjadi Sedang Diproses?`);
 
@@ -805,7 +826,7 @@ const App = {
                         document.getElementById('penjualan-jumlah').value = '1';
                         document.getElementById('penjualan-catatan').value = '';
                         calculateTotal();
-                        
+
                         this.loadPenjualanList();
                         this.loadDashboardData();
                     } else {
@@ -843,7 +864,7 @@ const App = {
                 const price = parseFloat(btn.dataset.price);
                 const input = document.getElementById('penjualan-harga');
                 const jenisSelect = document.getElementById('penjualan-jenis');
-                
+
                 input.value = price;
                 if (jenisSelect) {
                     if (price <= 6000) {
@@ -888,7 +909,7 @@ const App = {
                     this.showToast('Pengeluaran operasional berhasil dicatat!');
                     document.getElementById('pengeluaran-nominal').value = '';
                     document.getElementById('pengeluaran-catatan').value = '';
-                    
+
                     this.loadPengeluaranList();
                     this.loadDashboardData();
                 } else {
@@ -912,7 +933,7 @@ const App = {
                 this.state.categories = result.data;
                 const selectEl = document.getElementById('pengeluaran-kategori');
                 if (selectEl) {
-                    selectEl.innerHTML = '<option value="">-- Pilih Kategori --</option>' + 
+                    selectEl.innerHTML = '<option value="">-- Pilih Kategori --</option>' +
                         result.data.map(cat => `<option value="${cat.id}">${cat.nama_kategori}</option>`).join('');
                 }
             }
@@ -1098,7 +1119,7 @@ const App = {
             const listKategoriEl = document.getElementById('dash-breakdown-kategori');
             if (listKategoriEl && Array.isArray(data.kategori_pengeluaran_bulan_ini)) {
                 const totalBulanKeluar = data.bulan_ini.pengeluaran || 1;
-                
+
                 if (data.kategori_pengeluaran_bulan_ini.length === 0 || data.bulan_ini.pengeluaran === 0) {
                     listKategoriEl.innerHTML = '<li style="color:#94a3b8; font-size:0.85rem;">Belum ada pengeluaran di bulan ini.</li>';
                 } else {

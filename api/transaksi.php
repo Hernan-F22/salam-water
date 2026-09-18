@@ -1,4 +1,5 @@
 <?php
+
 /**
  * REST API Endpoint: Manajemen Transaksi Penjualan & Pengeluaran
  * Aplikasi: Salam Water - Depot Air Minum Isi Ulang
@@ -35,7 +36,8 @@ switch ($type) {
 // ==========================================================
 // HANDLER: KATEGORI PENGELUARAN
 // ==========================================================
-function handle_kategori($pdo, $method) {
+function handle_kategori($pdo, $method)
+{
     if ($method === 'GET') {
         try {
             $stmt = $pdo->query("SELECT id, nama_kategori, keterangan FROM kategori_pengeluaran ORDER BY id ASC");
@@ -52,7 +54,8 @@ function handle_kategori($pdo, $method) {
 // ==========================================================
 // HANDLER: TRANSAKSI PENJUALAN
 // ==========================================================
-function handle_penjualan($pdo, $method) {
+function handle_penjualan($pdo, $method)
+{
     switch ($method) {
         case 'GET':
             try {
@@ -187,7 +190,8 @@ function handle_penjualan($pdo, $method) {
 // ==========================================================
 // HANDLER: PENGELUARAN OPERASIONAL
 // ==========================================================
-function handle_pengeluaran($pdo, $method) {
+function handle_pengeluaran($pdo, $method)
+{
     switch ($method) {
         case 'GET':
             try {

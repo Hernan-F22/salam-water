@@ -1,4 +1,5 @@
 <?php
+
 /**
  * REST API Endpoint: Autentikasi Admin Salam Water
  * File: api/auth.php
@@ -30,7 +31,8 @@ switch ($action) {
 /**
  * Handle Login Admin
  */
-function handle_login($method) {
+function handle_login($method)
+{
     if ($method !== 'POST') {
         json_response(false, null, 'Metode HTTP harus POST untuk login.', 405);
     }
@@ -59,7 +61,8 @@ function handle_login($method) {
 /**
  * Handle Pemeriksaan Sesi Admin Aktif
  */
-function handle_check() {
+function handle_check()
+{
     $auth = verify_admin_token();
     if ($auth) {
         json_response(true, [
@@ -78,7 +81,8 @@ function handle_check() {
 /**
  * Handle Logout Admin
  */
-function handle_logout($method) {
+function handle_logout($method)
+{
     if ($method !== 'POST') {
         json_response(false, null, 'Metode HTTP harus POST untuk logout.', 405);
     }
