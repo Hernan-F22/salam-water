@@ -14,9 +14,7 @@ Aplikasi web modern, responsif, dan serverless-ready untuk manajemen keuangan da
    - Tombol konfirmasi otomatis ke WhatsApp pengelola depot.
 
 2. **Panel Admin Terproteksi**:
-   - Autentikasi khusus pengelola depot:
-     - **Username**: `adminwater`
-     - **Password**: `22Febuary$`
+   - Autentikasi khusus pengelola depot
    - Antrean Pesanan Masuk: Pengelola dapat memproses atau menyelesaikan pesanan.
    - **Otomatisasi Kas**: Pesanan yang diselesaikan otomatis tercatat ke dalam penjualan kas dan laporan keuangan.
 
