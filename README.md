@@ -9,7 +9,7 @@ Aplikasi web modern, responsif, dan serverless-ready untuk manajemen keuangan da
 1. **Dashboard Ringkasan Real-Time**:
 1. **Portal Pemesanan Publik (Pelanggan / Tamu)**:
    - Pelanggan dapat memesan air isi ulang & galon baru secara online tanpa harus login.
-   - Pilihan tarif resmi depot: Rp 5.000, Rp 6.000, Rp 22.000, dan Rp 65.000.
+   - Pilihan tarif resmi depot: Rp 5.000, Rp 6.000, Rp 24.000, dan Rp 67.000.
    - Pelacakan status pesanan secara real-time (Menunggu, Diproses, Selesai, Dibatalkan).
    - Tombol konfirmasi otomatis ke WhatsApp pengelola depot.
 
