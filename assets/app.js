@@ -858,7 +858,7 @@ const App = {
             });
         });
 
-        // Preset Harga Satuan (5000, 6000, 22000, 65000)
+        // Preset Harga Satuan (5000, 6000, 24000, 67000)
         document.querySelectorAll('.btn-preset-price').forEach(btn => {
             btn.addEventListener('click', () => {
                 const price = parseFloat(btn.dataset.price);
