@@ -24,6 +24,8 @@ const App = {
         },
         categories: [],
         adminOrderStatusFilter: '',
+        pinjamStatusFilter: '',
+        pinjamSearch: '',
         reportStartDate: '',
         reportEndDate: ''
     },
@@ -36,6 +38,8 @@ const App = {
         this.initLiveClock();
         this.initPublicOrderForm();
         this.initAdminOrderFilters();
+        this.initPinjamGalon();
+        this.initQrisViewer();
         this.initSalesCalculations();
         this.initExpenseForm();
         this.initReportFilters();
@@ -150,6 +154,7 @@ const App = {
             // Muat data khusus admin
             this.loadCategories();
             this.loadAdminOrders();
+            this.loadPinjamGalonList();
             this.loadDashboardData();
             this.loadPenjualanList();
             this.loadPengeluaranList();
@@ -335,6 +340,8 @@ const App = {
         // Trigger refresh data saat tab dibuka
         if (tabId === 'antrean' && this.state.auth.isAdmin) {
             this.loadAdminOrders();
+        } else if (tabId === 'pinjam' && this.state.auth.isAdmin) {
+            this.loadPinjamGalonList();
         } else if (tabId === 'dashboard' && this.state.auth.isAdmin) {
             this.loadDashboardData();
         } else if (tabId === 'penjualan' && this.state.auth.isAdmin) {
@@ -392,6 +399,16 @@ const App = {
         const btnWa1 = document.getElementById('btn-wa-confirm-1');
         const btnWa2 = document.getElementById('btn-wa-confirm-2');
 
+        // Elemen Google Maps & QRIS
+        const btnGps = document.getElementById('btn-detect-gps');
+        const mapsInput = document.getElementById('order-maps-url');
+        const btnPreviewMaps = document.getElementById('btn-preview-maps');
+        const latInput = document.getElementById('order-latitude');
+        const lngInput = document.getElementById('order-longitude');
+        const gpsStatus = document.getElementById('gps-status-indicator');
+        const qrisPreviewBox = document.getElementById('box-qris-customer-preview');
+        const qrisNominalDisplay = document.getElementById('qris-nominal-display');
+
         // State produk pesanan default
         this.state.orderProduct = {
             jenis: 'isi_ulang',
@@ -405,11 +422,17 @@ const App = {
             if (totalDisplay) {
                 totalDisplay.textContent = this.formatRupiah(total);
             }
+            if (qrisNominalDisplay) {
+                qrisNominalDisplay.textContent = this.formatRupiah(total);
+            }
         };
 
         const updateAddressMode = (price) => {
             if (!addressInput) return;
-            if (parseFloat(price) === 5000) {
+            const isAmbil = parseFloat(price) === 5000;
+            const mapsGroup = document.getElementById('group-order-maps');
+
+            if (isAmbil) {
                 if (addressLabel) addressLabel.innerHTML = '🏪 Info Pengambilan <small style="font-weight:400; color:var(--text-muted);">(Opsional - Ambil di Depot)</small>';
                 addressInput.placeholder = 'Bisa dikosongkan (ambil sendiri di depot) atau isi estimasi jam pengambilan';
                 addressInput.required = false;
@@ -417,6 +440,7 @@ const App = {
                     addressHelper.textContent = 'Tarif Rp 5.000 untuk pesanan yang diambil langsung di depot (tanpa pengantaran).';
                     addressHelper.style.color = '#4338ca';
                 }
+                if (mapsGroup) mapsGroup.style.display = 'none';
             } else {
                 if (addressLabel) addressLabel.innerHTML = '🚚 Alamat Pengantaran <span style="color:#ef4444;">*</span> <small style="font-weight:400; color:var(--text-muted);">(Pesan Antar)</small>';
                 addressInput.placeholder = 'Contoh: Jl. Mawar No. 15 RT 02/04 (Rumah pagar hitam)';
@@ -425,12 +449,73 @@ const App = {
                     addressHelper.textContent = 'Pesanan akan diantar langsung oleh kurir depot ke alamat Anda.';
                     addressHelper.style.color = 'var(--text-muted)';
                 }
+                if (mapsGroup) mapsGroup.style.display = 'block';
             }
         };
 
         // Inisialisasi awal kalkulasi & mode alamat
         calculateTotal();
         updateAddressMode(5000);
+
+        // Toggle Tampilan QRIS jika metode pembayaran QRIS dipilih
+        if (paymentSelect) {
+            paymentSelect.addEventListener('change', () => {
+                const isQris = paymentSelect.value === 'qris';
+                if (qrisPreviewBox) qrisPreviewBox.style.display = isQris ? 'block' : 'none';
+                calculateTotal();
+            });
+        }
+
+        // Fitur Deteksi Titik GPS Google Maps
+        if (btnGps && mapsInput) {
+            btnGps.addEventListener('click', () => {
+                if (!navigator.geolocation) {
+                    this.showToast('Browser Anda tidak mendukung geolokasi GPS.', 'error');
+                    return;
+                }
+                btnGps.disabled = true;
+                btnGps.innerHTML = '⏳ Mendeteksi GPS...';
+                navigator.geolocation.getCurrentPosition(
+                    (pos) => {
+                        const lat = pos.coords.latitude;
+                        const lng = pos.coords.longitude;
+                        const mapsUrl = `https://www.google.com/maps?q=${lat},${lng}`;
+                        mapsInput.value = mapsUrl;
+                        if (latInput) latInput.value = lat;
+                        if (lngInput) lngInput.value = lng;
+                        if (btnPreviewMaps) {
+                            btnPreviewMaps.href = mapsUrl;
+                            btnPreviewMaps.style.display = 'inline-flex';
+                        }
+                        if (gpsStatus) {
+                            gpsStatus.style.display = 'block';
+                            gpsStatus.textContent = `🎯 Titik GPS akurat berhasil dideteksi! (${lat.toFixed(5)}, ${lng.toFixed(5)})`;
+                        }
+                        btnGps.disabled = false;
+                        btnGps.innerHTML = '✅ Titik GPS Terdeteksi';
+                        this.showToast('Titik lokasi GPS berhasil dicatat!');
+                    },
+                    (err) => {
+                        btnGps.disabled = false;
+                        btnGps.innerHTML = '🎯 Ambil Titik GPS Saya';
+                        this.showToast('Gagal mendeteksi lokasi GPS: ' + err.message, 'error');
+                    },
+                    { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+                );
+            });
+        }
+
+        if (mapsInput && btnPreviewMaps) {
+            mapsInput.addEventListener('input', (e) => {
+                const val = e.target.value.trim();
+                if (val.startsWith('http://') || val.startsWith('https://')) {
+                    btnPreviewMaps.href = val;
+                    btnPreviewMaps.style.display = 'inline-flex';
+                } else {
+                    btnPreviewMaps.style.display = 'none';
+                }
+            });
+        }
 
         // Radio Card Selection
         radioCards.forEach(card => {
@@ -493,6 +578,9 @@ const App = {
                     nama_pelanggan: nama,
                     no_hp: nohp,
                     alamat: alamat,
+                    maps_url: mapsInput ? mapsInput.value.trim() : '',
+                    latitude: latInput ? latInput.value.trim() : '',
+                    longitude: lngInput ? lngInput.value.trim() : '',
                     jenis_galon: this.state.orderProduct.jenis,
                     harga_satuan: this.state.orderProduct.harga,
                     jumlah_galon: qty,
@@ -524,13 +612,34 @@ const App = {
                             if (successDetails) {
                                 const jenisLabel = ord.jenis_galon === 'isi_ulang' ? 'Isi Ulang Air' : 'Galon Baru';
                                 const layananLabel = parseFloat(ord.harga_satuan) === 5000 ? '🏪 Ambil di Depot' : '🚚 Pesan Antar';
+                                const isQris = ord.metode === 'qris';
+                                const metodeBadge = isQris ? '📲 QRIS (Non-Tunai)' : '💵 Tunai / Cash (Bayar di Tempat)';
+
+                                let mapsHtml = '';
+                                if (ord.maps_url) {
+                                    mapsHtml = `<div><strong>Titik Maps:</strong> <a href="${ord.maps_url}" target="_blank" style="color:#0284c7; font-weight:700; text-decoration:underline;">Lihat di Google Maps 📍</a></div>`;
+                                }
+
+                                let qrisNotice = '';
+                                if (isQris) {
+                                    qrisNotice = `
+                                        <div style="background:#eff6ff; border:1px solid #bfdbfe; border-radius:6px; padding:0.65rem; margin-top:0.65rem; color:#1e40af; font-size:0.83rem; line-height:1.4;">
+                                            <strong>⚡ Pembayaran QRIS:</strong><br>
+                                            Harap lampirkan foto / screenshot bukti transfer pembayaran Anda ke chat WhatsApp agar pesanan segera diverifikasi dan diproses oleh depot.
+                                        </div>
+                                    `;
+                                }
+
                                 successDetails.innerHTML = `
                                     <div><strong>Pelanggan:</strong> ${ord.nama} (${ord.no_hp})</div>
                                     <div><strong>Layanan:</strong> ${layananLabel}</div>
                                     <div><strong>Pesanan:</strong> ${ord.jumlah_galon}x ${jenisLabel} (@ ${this.formatRupiah(ord.harga_satuan)})</div>
-                                    <div><strong>Total Tagihan:</strong> <strong style="color:var(--primary); font-size:1rem;">${this.formatRupiah(ord.total)}</strong> (Tunai/Cash)</div>
+                                    <div><strong>Total Tagihan:</strong> <strong style="color:var(--primary); font-size:1.05rem;">${this.formatRupiah(ord.total)}</strong></div>
+                                    <div><strong>Metode Bayar:</strong> ${metodeBadge}</div>
                                     <div><strong>Alamat / Info:</strong> ${ord.alamat}</div>
+                                    ${mapsHtml}
                                     ${ord.catatan ? `<div><strong>Catatan:</strong> ${ord.catatan}</div>` : ''}
+                                    ${qrisNotice}
                                 `;
                             }
 
@@ -545,7 +654,14 @@ const App = {
                         if (phoneInput) phoneInput.value = '';
                         if (addressInput) addressInput.value = '';
                         if (notesInput) notesInput.value = '';
+                        if (mapsInput) mapsInput.value = '';
+                        if (latInput) latInput.value = '';
+                        if (lngInput) lngInput.value = '';
+                        if (btnPreviewMaps) btnPreviewMaps.style.display = 'none';
+                        if (gpsStatus) gpsStatus.style.display = 'none';
                         if (qtyInput) qtyInput.value = '1';
+                        if (paymentSelect) paymentSelect.value = 'tunai';
+                        if (qrisPreviewBox) qrisPreviewBox.style.display = 'none';
 
                         radioCards.forEach((c, idx) => c.classList.toggle('active', idx === 0));
                         this.state.orderProduct = { jenis: 'isi_ulang', harga: 5000 };
@@ -591,18 +707,36 @@ const App = {
         tbody.innerHTML = '<tr><td colspan="9" style="text-align:center; padding: 2rem;">Memuat daftar pesanan masuk...</td></tr>';
 
         try {
-            const statusParam = this.state.adminOrderStatusFilter ? `&status=${this.state.adminOrderStatusFilter}` : '';
+            const isQrisFilter = this.state.adminOrderStatusFilter === 'qris';
+            const statusParam = (this.state.adminOrderStatusFilter && !isQrisFilter) 
+                ? `&status=${this.state.adminOrderStatusFilter}` 
+                : '';
             const res = await this.authFetch(`api/pesanan.php?all=1${statusParam}`);
             const result = await res.json();
 
             if (result.success && result.data) {
-                const { orders, stats } = result.data;
+                let { orders, stats } = result.data;
 
                 // Update Counter Menunggu di Nav Tab
                 if (badgeCount && stats) {
                     const pending = parseInt(stats.pending_count, 10) || 0;
                     badgeCount.textContent = pending;
                     badgeCount.style.display = pending > 0 ? 'inline-block' : 'none';
+                }
+
+                // Tampilkan Banner Notifikasi QRIS jika ada pesanan QRIS menunggu
+                const bannerQris = document.getElementById('banner-qris-alert');
+                const badgeQrisCount = document.getElementById('qris-pending-count-badge');
+                if (stats && stats.qris_pending_count) {
+                    const qrisCount = parseInt(stats.qris_pending_count, 10) || 0;
+                    if (badgeQrisCount) badgeQrisCount.textContent = qrisCount;
+                    if (bannerQris) bannerQris.style.display = qrisCount > 0 ? 'block' : 'none';
+                } else if (bannerQris) {
+                    bannerQris.style.display = 'none';
+                }
+
+                if (isQrisFilter && Array.isArray(orders)) {
+                    orders = orders.filter(item => item.metode_pembayaran === 'qris');
                 }
 
                 if (Array.isArray(orders) && orders.length > 0) {
@@ -675,6 +809,27 @@ const App = {
                             ? (item.alamat && item.alamat !== 'Ambil Sendiri di Depot' ? item.alamat : '<span style="color:var(--text-muted);">Diambil di depot</span>')
                             : item.alamat;
 
+                        // Google Maps button
+                        let mapsBtn = '';
+                        if (item.maps_url) {
+                            mapsBtn = `<div style="margin-top: 4px;"><a href="${item.maps_url}" target="_blank" class="btn-xs btn-maps" title="Buka Titik Lokasi di Google Maps">📍 Rute Maps</a></div>`;
+                        } else if (!isAmbil && item.alamat && item.alamat !== 'Ambil Sendiri di Depot') {
+                            mapsBtn = `<div style="margin-top: 4px;"><a href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(item.alamat)}" target="_blank" class="btn-xs" style="color:#0284c7; background:#e0f2fe; text-decoration:none;" title="Cari Alamat di Google Maps">🔍 Cari Maps</a></div>`;
+                        }
+
+                        // Badge Metode Pembayaran
+                        let metodeBadge = `<span class="badge badge-${item.metode_pembayaran}">${item.metode_pembayaran.toUpperCase()}</span>`;
+                        if (item.metode_pembayaran === 'qris') {
+                            metodeBadge = `
+                                <div>
+                                    <span class="badge badge-qris pulse-qris">📲 QRIS</span>
+                                    <button type="button" class="btn-xs" onclick="App.showQrisModal(${item.total}, '${item.nomor_pesanan}')" style="margin-top:3px; background:#e0e7ff; color:#3730a3; border:none; width:100%; justify-content:center; cursor:pointer;" title="Lihat QRIS Toko">
+                                        👁️ QRIS
+                                    </button>
+                                </div>
+                            `;
+                        }
+
                         return `
                             <tr>
                                 <td><strong>${item.nomor_pesanan}</strong></td>
@@ -688,6 +843,7 @@ const App = {
                                 <td style="max-width:210px; font-size:0.85rem;">
                                     ${layananBadge}
                                     <div>${alamatTampil}</div>
+                                    ${mapsBtn}
                                     ${item.catatan ? `<small style="color:var(--text-muted); display:block; margin-top:2px;">Ket: ${item.catatan}</small>` : ''}
                                 </td>
                                 <td>
@@ -695,7 +851,7 @@ const App = {
                                     <small style="color:var(--text-muted);">@ ${this.formatRupiah(item.harga_satuan)}</small>
                                 </td>
                                 <td><strong class="text-masuk">${this.formatRupiah(item.total)}</strong></td>
-                                <td><span class="badge badge-${item.metode_pembayaran}">${item.metode_pembayaran.toUpperCase()}</span></td>
+                                <td>${metodeBadge}</td>
                                 <td>${badgeStatus}</td>
                                 <td class="action-col">${actions}</td>
                             </tr>
@@ -708,6 +864,13 @@ const App = {
         } catch (err) {
             tbody.innerHTML = '<tr><td colspan="9" style="text-align:center; padding: 2rem; color: #ef4444;">Gagal memuat pesanan antrean.</td></tr>';
         }
+    },
+
+    filterQrisOrders() {
+        const pills = document.querySelectorAll('#order-status-filters .period-pill');
+        pills.forEach(p => p.classList.toggle('active', p.dataset.status === 'qris'));
+        this.state.adminOrderStatusFilter = 'qris';
+        this.loadAdminOrders();
     },
 
     async updateOrderStatus(orderId, newStatus, noPesanan = '') {
@@ -762,6 +925,444 @@ const App = {
             }
         } catch (err) {
             this.showToast('Terjadi kesalahan saat menghapus pesanan.', 'error');
+        }
+    },
+
+    // ==========================================================
+    // SISTEM PINJAM GALON (KHUSUS ADMIN)
+    // ==========================================================
+    initPinjamGalon() {
+        const btnToggle = document.getElementById('btn-toggle-pinjam-form');
+        const btnClose = document.getElementById('btn-close-pinjam-form');
+        const btnCancel = document.getElementById('btn-cancel-pinjam');
+        const boxForm = document.getElementById('box-pinjam-form');
+        const form = document.getElementById('form-pinjam-galon');
+        const tglInput = document.getElementById('pinjam-tanggal');
+        const jmlInput = document.getElementById('pinjam-jumlah');
+        const jaminanInput = document.getElementById('pinjam-jaminan');
+        const btnGps = document.getElementById('btn-pinjam-gps');
+        const mapsInput = document.getElementById('pinjam-maps-url');
+        const searchInput = document.getElementById('pinjam-search-input');
+
+        const openForm = () => {
+            if (boxForm) {
+                boxForm.style.display = 'block';
+                if (tglInput && !tglInput.value) {
+                    const today = new Date();
+                    const yyyy = today.getFullYear();
+                    const mm = String(today.getMonth() + 1).padStart(2, '0');
+                    const dd = String(today.getDate()).padStart(2, '0');
+                    tglInput.value = `${yyyy}-${mm}-${dd}`;
+                }
+                const nameInput = document.getElementById('pinjam-nama');
+                if (nameInput) nameInput.focus();
+                boxForm.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }
+        };
+
+        const closeForm = () => {
+            if (boxForm) boxForm.style.display = 'none';
+        };
+
+        if (btnToggle) btnToggle.addEventListener('click', openForm);
+        if (btnClose) btnClose.addEventListener('click', closeForm);
+        if (btnCancel) btnCancel.addEventListener('click', closeForm);
+
+        // Preset Jumlah Galon
+        document.querySelectorAll('.btn-preset-pinjam-qty').forEach(btn => {
+            btn.addEventListener('click', () => {
+                if (jmlInput) jmlInput.value = btn.dataset.qty;
+            });
+        });
+
+        // Preset Uang Jaminan
+        document.querySelectorAll('.btn-preset-jaminan').forEach(btn => {
+            btn.addEventListener('click', () => {
+                if (jaminanInput) jaminanInput.value = btn.dataset.val;
+            });
+        });
+
+        // GPS Peminjam
+        if (btnGps && mapsInput) {
+            btnGps.addEventListener('click', () => {
+                if (!navigator.geolocation) {
+                    this.showToast('Browser tidak mendukung geolokasi GPS.', 'error');
+                    return;
+                }
+                btnGps.disabled = true;
+                btnGps.innerHTML = '⏳ Mengambil GPS...';
+                navigator.geolocation.getCurrentPosition(
+                    (pos) => {
+                        const lat = pos.coords.latitude;
+                        const lng = pos.coords.longitude;
+                        mapsInput.value = `https://www.google.com/maps?q=${lat},${lng}`;
+                        btnGps.disabled = false;
+                        btnGps.innerHTML = '✅ GPS Didapat';
+                        this.showToast('Titik koordinat berhasil didapatkan!');
+                    },
+                    (err) => {
+                        btnGps.disabled = false;
+                        btnGps.innerHTML = '🎯 Ambil Titik GPS Saya';
+                        this.showToast('Gagal mendapatkan GPS: ' + err.message, 'error');
+                    },
+                    { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+                );
+            });
+        }
+
+        // Status Filter Pills
+        const pills = document.querySelectorAll('#pinjam-status-filters .period-pill');
+        pills.forEach(pill => {
+            pill.addEventListener('click', () => {
+                pills.forEach(p => p.classList.remove('active'));
+                pill.classList.add('active');
+                this.state.pinjamStatusFilter = pill.dataset.status;
+                this.loadPinjamGalonList();
+            });
+        });
+
+        // Search Input
+        if (searchInput) {
+            let debounceTimer = null;
+            searchInput.addEventListener('input', (e) => {
+                clearTimeout(debounceTimer);
+                debounceTimer = setTimeout(() => {
+                    this.state.pinjamSearch = e.target.value.trim();
+                    this.loadPinjamGalonList();
+                }, 300);
+            });
+        }
+
+        // Submit Form Pinjam Galon
+        if (form) {
+            form.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const submitBtn = document.getElementById('btn-submit-pinjam');
+                const nama = document.getElementById('pinjam-nama').value.trim();
+                const nohp = document.getElementById('pinjam-nohp').value.trim();
+                const alamat = document.getElementById('pinjam-alamat').value.trim();
+                const tanggal = document.getElementById('pinjam-tanggal').value;
+                const jumlah = parseInt(jmlInput.value, 10) || 1;
+                const jaminan = parseFloat(jaminanInput.value) || 0;
+                const maps = mapsInput ? mapsInput.value.trim() : '';
+                const catatan = document.getElementById('pinjam-catatan').value.trim();
+
+                if (!nama || !nohp || !alamat) {
+                    this.showToast('Nama, nomor HP, dan alamat peminjam wajib diisi!', 'error');
+                    return;
+                }
+
+                if (submitBtn) {
+                    submitBtn.disabled = true;
+                    submitBtn.innerHTML = '⏳ Menyimpan Data...';
+                }
+
+                try {
+                    const res = await this.authFetch('api/pinjam_galon.php?action=create', {
+                        method: 'POST',
+                        body: JSON.stringify({
+                            tanggal_pinjam: tanggal,
+                            nama_peminjam: nama,
+                            no_hp: nohp,
+                            alamat: alamat,
+                            maps_url: maps,
+                            jumlah_galon: jumlah,
+                            uang_jaminan: jaminan,
+                            catatan: catatan
+                        })
+                    });
+                    const result = await res.json();
+
+                    if (result.success) {
+                        this.showToast(`Peminjaman ${jumlah} galon untuk ${nama} berhasil dicatat!`);
+                        form.reset();
+                        if (boxForm) boxForm.style.display = 'none';
+                        this.loadPinjamGalonList();
+                    } else {
+                        this.showToast(result.message || 'Gagal mencatat peminjaman galon.', 'error');
+                    }
+                } catch (err) {
+                    this.showToast('Gagal menghubungi server.', 'error');
+                } finally {
+                    if (submitBtn) {
+                        submitBtn.disabled = false;
+                        submitBtn.innerHTML = '💾 Simpan Data Peminjaman';
+                    }
+                }
+            });
+        }
+    },
+
+    async loadPinjamGalonList() {
+        if (!this.state.auth.isAdmin) return;
+        const tbody = document.getElementById('tbody-pinjam-galon');
+        const badgeCount = document.getElementById('badge-pinjam-count');
+        if (!tbody) return;
+
+        tbody.innerHTML = '<tr><td colspan="8" style="text-align:center; padding: 2rem;">Memuat data peminjaman galon...</td></tr>';
+
+        try {
+            const statusParam = this.state.pinjamStatusFilter ? `&status=${this.state.pinjamStatusFilter}` : '';
+            const searchParam = this.state.pinjamSearch ? `&q=${encodeURIComponent(this.state.pinjamSearch)}` : '';
+            const res = await this.authFetch(`api/pinjam_galon.php?${statusParam}${searchParam}`);
+            const result = await res.json();
+
+            if (result.success && result.data) {
+                const { items, stats } = result.data;
+
+                // Update 4 Metrik
+                if (stats) {
+                    const statGalon = document.getElementById('pinjam-stat-total-galon');
+                    const statPeminjam = document.getElementById('pinjam-stat-total-peminjam');
+                    const statJaminan = document.getElementById('pinjam-stat-total-jaminan');
+                    const statKembali = document.getElementById('pinjam-stat-total-kembali');
+
+                    const totalDipinjam = parseInt(stats.total_galon_dipinjam, 10) || 0;
+                    const totalPeminjam = parseInt(stats.total_orang_meminjam, 10) || 0;
+                    const totalJaminan = parseFloat(stats.total_uang_jaminan) || 0;
+                    const totalKembali = parseInt(stats.total_galon_kembali, 10) || 0;
+
+                    if (statGalon) statGalon.textContent = `${totalDipinjam} Galon`;
+                    if (statPeminjam) statPeminjam.textContent = `${totalPeminjam} Orang`;
+                    if (statJaminan) statJaminan.textContent = this.formatRupiah(totalJaminan);
+                    if (statKembali) statKembali.textContent = `${totalKembali} Galon`;
+
+                    if (badgeCount) {
+                        badgeCount.textContent = totalDipinjam;
+                        badgeCount.style.display = totalDipinjam > 0 ? 'inline-block' : 'none';
+                    }
+                }
+
+                // Render Baris Tabel
+                if (Array.isArray(items) && items.length > 0) {
+                    tbody.innerHTML = items.map(item => {
+                        const isDipinjam = item.status === 'dipinjam';
+                        const badgeStatus = isDipinjam
+                            ? '<span class="badge badge-dipinjam">🟡 Sedang Dipinjam</span>'
+                            : '<span class="badge badge-dikembalikan">🟢 Sudah Dikembalikan</span>';
+
+                        const cleanPhone = item.no_hp.replace(/\D/g, '');
+                        const waReminderMsg = `Halo Kak ${item.nama_peminjam}, kami dari Depot Salam Water ingin menanyakan perihal galon depot kami sebanyak ${item.jumlah_galon} buah yang dipinjam pada tanggal ${this.formatTanggal(item.tanggal_pinjam)}. Apakah sudah selesai digunakan untuk kami ambil / dikembalikan? Terima kasih banyak ya Kak. 🙏`;
+                        const waLink = `https://wa.me/${cleanPhone}?text=${encodeURIComponent(waReminderMsg)}`;
+
+                        let mapsBtn = '';
+                        if (item.maps_url) {
+                            mapsBtn = `<div style="margin-top:4px;"><a href="${item.maps_url}" target="_blank" class="btn-xs btn-maps" title="Buka Titik Lokasi Google Maps">📍 Rute Maps</a></div>`;
+                        } else if (item.alamat) {
+                            mapsBtn = `<div style="margin-top:4px;"><a href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(item.alamat)}" target="_blank" class="btn-xs" style="color:#0284c7; background:#e0f2fe; text-decoration:none;" title="Cari Alamat di Google Maps">🔍 Cari Maps</a></div>`;
+                        }
+
+                        let tglKembaliTampil = '-';
+                        if (item.tanggal_kembali) {
+                            tglKembaliTampil = `<div><strong>Kembali:</strong> ${this.formatTanggal(item.tanggal_kembali)}</div>`;
+                        }
+
+                        let actions = '';
+                        if (isDipinjam) {
+                            actions = `
+                                <div style="display:flex; gap:0.3rem; align-items:center; flex-wrap:wrap;">
+                                    <button class="btn btn-sm btn-success" onclick="App.returnPinjamGalon(${item.id}, '${item.nama_peminjam.replace(/'/g, "\\'")}', ${item.jumlah_galon})" title="Tandai Galon Sudah Dikembalikan">
+                                        ✅ Kembali
+                                    </button>
+                                    <a href="${waLink}" target="_blank" class="btn btn-sm btn-secondary" style="color:#15803d; text-decoration:none; font-weight:700;" title="Kirim Pengingat WhatsApp ke Peminjam">
+                                        📱 WA
+                                    </a>
+                                    <button class="btn btn-sm btn-danger-outline" onclick="App.deletePinjamGalon(${item.id}, '${item.nama_peminjam.replace(/'/g, "\\'")}')" title="Hapus Data Peminjaman">
+                                        🗑️
+                                    </button>
+                                </div>
+                            `;
+                        } else {
+                            actions = `
+                                <div style="display:flex; gap:0.4rem; align-items:center;">
+                                    <span style="color:var(--success-dark); font-size:0.8rem; font-weight:700;">✔️ Selesai</span>
+                                    <button class="btn btn-sm btn-danger-outline" onclick="App.deletePinjamGalon(${item.id}, '${item.nama_peminjam.replace(/'/g, "\\'")}')" title="Hapus Data">
+                                        🗑️ Hapus
+                                    </button>
+                                </div>
+                            `;
+                        }
+
+                        return `
+                            <tr>
+                                <td>
+                                    <div><strong>${item.nomor_pinjam}</strong></div>
+                                    <small style="color:var(--text-muted);">${this.formatTanggal(item.tanggal_pinjam)}</small>
+                                </td>
+                                <td>
+                                    <div><strong>${item.nama_peminjam}</strong></div>
+                                    <a href="${waLink}" target="_blank" style="font-size:0.82rem; color:#16a34a; text-decoration:none;">
+                                        📱 ${item.no_hp}
+                                    </a>
+                                </td>
+                                <td style="max-width:220px; font-size:0.85rem;">
+                                    <div>${item.alamat}</div>
+                                    ${mapsBtn}
+                                </td>
+                                <td>
+                                    <strong style="font-size:1.05rem; color:#4338ca;">${item.jumlah_galon}</strong> galon
+                                </td>
+                                <td>
+                                    <strong class="text-masuk">${this.formatRupiah(item.uang_jaminan)}</strong>
+                                </td>
+                                <td>${badgeStatus}</td>
+                                <td style="font-size:0.85rem;">
+                                    ${tglKembaliTampil}
+                                    ${item.catatan ? `<small style="color:var(--text-muted); display:block; margin-top:2px;">Ket: ${item.catatan}</small>` : ''}
+                                </td>
+                                <td class="action-col">${actions}</td>
+                            </tr>
+                        `;
+                    }).join('');
+                } else {
+                    tbody.innerHTML = '<tr><td colspan="8" style="text-align:center; padding: 2rem; color:#64748b;">Belum ada data peminjaman galon pada filter ini.</td></tr>';
+                }
+            }
+        } catch (err) {
+            tbody.innerHTML = '<tr><td colspan="8" style="text-align:center; padding: 2rem; color:#ef4444;">Gagal memuat data peminjaman galon.</td></tr>';
+        }
+    },
+
+    async returnPinjamGalon(id, nama, jumlah) {
+        const today = new Date();
+        const yyyy = today.getFullYear();
+        const mm = String(today.getMonth() + 1).padStart(2, '0');
+        const dd = String(today.getDate()).padStart(2, '0');
+        const todayStr = `${yyyy}-${mm}-${dd}`;
+
+        if (!confirm(`Konfirmasi Pengembalian:\nTandai bahwa ${nama} telah mengembalikan ${jumlah} galon ke depot Salam Water?`)) {
+            return;
+        }
+
+        try {
+            const res = await this.authFetch('api/pinjam_galon.php?action=return', {
+                method: 'POST',
+                body: JSON.stringify({ id: id, tanggal_kembali: todayStr })
+            });
+            const result = await res.json();
+
+            if (result.success) {
+                this.showToast(result.message || 'Galon berhasil ditandai telah kembali!');
+                this.loadPinjamGalonList();
+            } else {
+                this.showToast(result.message || 'Gagal memproses pengembalian.', 'error');
+            }
+        } catch (err) {
+            this.showToast('Gagal menghubungi server.', 'error');
+        }
+    },
+
+    async deletePinjamGalon(id, nama) {
+        if (!confirm(`Apakah Anda yakin ingin menghapus catatan peminjaman galon atas nama ${nama}? Data yang dihapus tidak dapat dipulihkan.`)) {
+            return;
+        }
+
+        try {
+            const res = await this.authFetch(`api/pinjam_galon.php?action=delete&id=${id}`, {
+                method: 'POST'
+            });
+            const result = await res.json();
+
+            if (result.success) {
+                this.showToast(result.message || 'Catatan peminjaman galon berhasil dihapus.');
+                this.loadPinjamGalonList();
+            } else {
+                this.showToast(result.message || 'Gagal menghapus catatan.', 'error');
+            }
+        } catch (err) {
+            this.showToast('Gagal menghapus data.', 'error');
+        }
+    },
+
+    // ==========================================================
+    // QRIS VIEWER POP-UP
+    // ==========================================================
+    initQrisViewer() {
+        const modal = document.getElementById('modal-qris-viewer');
+
+        // Mode Switcher untuk Gambar QR (Customer Preview & Modal)
+        document.querySelectorAll('.btn-qris-mode').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const target = btn.dataset.target; // 'customer' or 'modal'
+                const src = btn.dataset.src;
+
+                // Update active state visual
+                document.querySelectorAll(`.btn-qris-mode[data-target="${target}"]`).forEach(b => {
+                    const isActive = (b === btn);
+                    b.classList.toggle('active', isActive);
+                    if (isActive) {
+                        b.style.background = '#2563eb';
+                        b.style.color = '#ffffff';
+                        b.style.border = 'none';
+                    } else {
+                        b.style.background = '#ffffff';
+                        b.style.color = '#1e40af';
+                        b.style.border = '1px solid #bfdbfe';
+                    }
+                });
+
+                if (target === 'customer') {
+                    const img = document.getElementById('customer-qris-img');
+                    const link = document.getElementById('customer-qris-open-link');
+                    if (img) img.src = src;
+                    if (link) link.href = src;
+                } else if (target === 'modal') {
+                    const img = document.getElementById('modal-qris-img');
+                    const link = document.getElementById('modal-qris-open-link');
+                    if (img) img.src = src;
+                    if (link) link.href = src;
+                }
+            });
+        });
+
+        if (!modal) return;
+
+        // Tutup jika klik di luar box (overlay)
+        modal.addEventListener('click', (e) => {
+            if (e.target === modal) {
+                this.closeQrisModal();
+            }
+        });
+
+        // Tutup dengan tombol Escape
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape' && modal.style.display === 'flex') {
+                this.closeQrisModal();
+            }
+        });
+    },
+
+    showQrisModal(amount, ref = '') {
+        const modal = document.getElementById('modal-qris-viewer');
+        const amountEl = document.getElementById('modal-qris-amount');
+        const refEl = document.getElementById('modal-qris-ref');
+        const imgModal = document.getElementById('modal-qris-img');
+        const linkModal = document.getElementById('modal-qris-open-link');
+
+        if (amountEl) {
+            amountEl.textContent = this.formatRupiah(amount || 0);
+        }
+        if (refEl) {
+            refEl.textContent = ref ? `Nomor Referensi: #${ref}` : '';
+        }
+
+        // Default ke qris-card.png yang tajam dan besar
+        if (imgModal && !imgModal.src.includes('qris-clean') && !imgModal.src.includes('qris-card')) {
+            imgModal.src = 'assets/qris-card.png';
+        }
+        if (linkModal && !linkModal.href.includes('qris-clean') && !linkModal.href.includes('qris-card')) {
+            linkModal.href = 'assets/qris-card.png';
+        }
+
+        if (modal) {
+            modal.style.display = 'flex';
+        }
+    },
+
+    closeQrisModal() {
+        const modal = document.getElementById('modal-qris-viewer');
+        if (modal) {
+            modal.style.display = 'none';
         }
     },
 
@@ -858,7 +1459,7 @@ const App = {
             });
         });
 
-        // Preset Harga Satuan (5000, 6000, 24000, 67000)
+        // Preset Harga Satuan (5.000 Ambil di Depot & 6.000 Pesan Antar)
         document.querySelectorAll('.btn-preset-price').forEach(btn => {
             btn.addEventListener('click', () => {
                 const price = parseFloat(btn.dataset.price);
@@ -867,11 +1468,7 @@ const App = {
 
                 input.value = price;
                 if (jenisSelect) {
-                    if (price <= 6000) {
-                        jenisSelect.value = 'isi_ulang';
-                    } else {
-                        jenisSelect.value = 'galon_baru';
-                    }
+                    jenisSelect.value = 'isi_ulang';
                 }
                 input.dispatchEvent(new Event('input'));
             });

@@ -116,6 +116,7 @@ function get_db_connection()
 
     try {
         $pdo = new PDO($dsn, $db_user, $db_pass, $options);
+        auto_migrate_schema($pdo);
         return $pdo;
     } catch (PDOException $e) {
         $is_vercel = get_config_env('VERCEL') !== null;
@@ -129,6 +130,54 @@ function get_db_connection()
 
         json_response(false, null, $msg, 500);
         exit;
+    }
+}
+
+/**
+ * Otomatis migrasi kolom baru (Google Maps) dan tabel pinjam_galon
+ */
+function auto_migrate_schema($pdo)
+{
+    static $migrated = false;
+    if ($migrated) return;
+    $migrated = true;
+
+    try {
+        // Cek kolom tabel pesanan
+        $cols = $pdo->query("SHOW COLUMNS FROM pesanan")->fetchAll(PDO::FETCH_COLUMN);
+        if (!in_array('maps_url', $cols)) {
+            $pdo->exec("ALTER TABLE pesanan ADD COLUMN maps_url TEXT NULL AFTER alamat");
+        }
+        if (!in_array('latitude', $cols)) {
+            $pdo->exec("ALTER TABLE pesanan ADD COLUMN latitude VARCHAR(50) NULL AFTER maps_url");
+        }
+        if (!in_array('longitude', $cols)) {
+            $pdo->exec("ALTER TABLE pesanan ADD COLUMN longitude VARCHAR(50) NULL AFTER latitude");
+        }
+
+        // Cek tabel pinjam_galon
+        $pdo->exec("
+            CREATE TABLE IF NOT EXISTS `pinjam_galon` (
+                `id` INT AUTO_INCREMENT PRIMARY KEY,
+                `nomor_pinjam` VARCHAR(30) NOT NULL UNIQUE,
+                `tanggal_pinjam` DATE NOT NULL,
+                `nama_peminjam` VARCHAR(100) NOT NULL,
+                `no_hp` VARCHAR(25) NOT NULL,
+                `alamat` TEXT NOT NULL,
+                `maps_url` TEXT NULL,
+                `jumlah_galon` INT NOT NULL DEFAULT 1,
+                `uang_jaminan` DECIMAL(12, 2) NOT NULL DEFAULT 0.00,
+                `status` ENUM('dipinjam', 'dikembalikan') NOT NULL DEFAULT 'dipinjam',
+                `tanggal_kembali` DATE NULL,
+                `catatan` VARCHAR(255) NULL,
+                `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                INDEX `idx_pinjam_status` (`status`),
+                INDEX `idx_pinjam_nama` (`nama_peminjam`),
+                INDEX `idx_pinjam_tanggal` (`tanggal_pinjam`)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+        ");
+    } catch (Exception $e) {
+        // Silent catch agar tidak mengganggu jika koneksi read-only atau tabel belum ada
     }
 }
 

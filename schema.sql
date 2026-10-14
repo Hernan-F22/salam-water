@@ -57,6 +57,9 @@ CREATE TABLE IF NOT EXISTS `pesanan` (
     `nama_pelanggan` VARCHAR(100) NOT NULL,
     `no_hp` VARCHAR(25) NOT NULL,
     `alamat` TEXT NOT NULL,
+    `maps_url` TEXT NULL,
+    `latitude` VARCHAR(50) NULL,
+    `longitude` VARCHAR(50) NULL,
     `jenis_galon` ENUM('isi_ulang', 'galon_baru') NOT NULL DEFAULT 'isi_ulang',
     `harga_satuan` DECIMAL(12, 2) NOT NULL DEFAULT 5000.00,
     `jumlah_galon` INT NOT NULL DEFAULT 1,
@@ -70,6 +73,27 @@ CREATE TABLE IF NOT EXISTS `pesanan` (
     INDEX `idx_pesanan_nohp` (`no_hp`),
     INDEX `idx_pesanan_status` (`status`),
     INDEX `idx_pesanan_tanggal` (`tanggal`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- 5. TABEL: pinjam_galon
+-- Menyimpan data peminjaman galon pelanggan untuk pelacakan
+CREATE TABLE IF NOT EXISTS `pinjam_galon` (
+    `id` INT AUTO_INCREMENT PRIMARY KEY,
+    `nomor_pinjam` VARCHAR(30) NOT NULL UNIQUE,
+    `tanggal_pinjam` DATE NOT NULL,
+    `nama_peminjam` VARCHAR(100) NOT NULL,
+    `no_hp` VARCHAR(25) NOT NULL,
+    `alamat` TEXT NOT NULL,
+    `maps_url` TEXT NULL,
+    `jumlah_galon` INT NOT NULL DEFAULT 1,
+    `uang_jaminan` DECIMAL(12, 2) NOT NULL DEFAULT 0.00,
+    `status` ENUM('dipinjam', 'dikembalikan') NOT NULL DEFAULT 'dipinjam',
+    `tanggal_kembali` DATE NULL,
+    `catatan` VARCHAR(255) NULL,
+    `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    INDEX `idx_pinjam_status` (`status`),
+    INDEX `idx_pinjam_nama` (`nama_peminjam`),
+    INDEX `idx_pinjam_tanggal` (`tanggal_pinjam`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ==========================================================

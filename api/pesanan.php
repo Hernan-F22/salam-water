@@ -45,6 +45,9 @@ function handle_create_pesanan($pdo)
     $nama = isset($input['nama_pelanggan']) ? trim($input['nama_pelanggan']) : '';
     $no_hp = isset($input['no_hp']) ? trim($input['no_hp']) : '';
     $alamat = isset($input['alamat']) ? trim($input['alamat']) : '';
+    $maps_url = !empty($input['maps_url']) ? trim($input['maps_url']) : null;
+    $latitude = !empty($input['latitude']) ? trim($input['latitude']) : null;
+    $longitude = !empty($input['longitude']) ? trim($input['longitude']) : null;
     $jenis_galon = isset($input['jenis_galon']) ? trim($input['jenis_galon']) : 'isi_ulang';
     $harga_satuan = isset($input['harga_satuan']) ? (float)$input['harga_satuan'] : 5000.00;
     $jumlah_galon = isset($input['jumlah_galon']) ? (int)$input['jumlah_galon'] : 1;
@@ -68,7 +71,7 @@ function handle_create_pesanan($pdo)
         }
     }
     if (!in_array($jenis_galon, ['isi_ulang', 'galon_baru'])) {
-        json_response(false, null, 'Pilihan jenis galon tidak valid.', 422);
+        $jenis_galon = 'isi_ulang';
     }
     if ($jumlah_galon <= 0) {
         json_response(false, null, 'Jumlah galon harus minimal 1.', 422);
@@ -88,11 +91,11 @@ function handle_create_pesanan($pdo)
     try {
         $stmt = $pdo->prepare("
             INSERT INTO pesanan (
-                nomor_pesanan, tanggal, nama_pelanggan, no_hp, alamat, 
+                nomor_pesanan, tanggal, nama_pelanggan, no_hp, alamat, maps_url, latitude, longitude,
                 jenis_galon, harga_satuan, jumlah_galon, total, 
                 metode_pembayaran, status, catatan
             ) VALUES (
-                :nomor, :tanggal, :nama, :nohp, :alamat,
+                :nomor, :tanggal, :nama, :nohp, :alamat, :maps, :lat, :lng,
                 :jenis, :harga, :jumlah, :total,
                 :metode, :status, :catatan
             )
@@ -104,6 +107,9 @@ function handle_create_pesanan($pdo)
             ':nama'    => $nama,
             ':nohp'    => $no_hp,
             ':alamat'  => $alamat,
+            ':maps'    => $maps_url,
+            ':lat'     => $latitude,
+            ':lng'     => $longitude,
             ':jenis'   => $jenis_galon,
             ':harga'   => $harga_satuan,
             ':jumlah'  => $jumlah_galon,
@@ -118,14 +124,25 @@ function handle_create_pesanan($pdo)
         // Siapkan link pesan WhatsApp konfirmasi
         $layanan_label = ((float)$harga_satuan == 5000.00) ? '🏪 Ambil Sendiri di Depot' : '🚚 Pesan Antar ke Alamat';
         $jenis_label = $jenis_galon === 'isi_ulang' ? 'Isi Ulang Air' : 'Galon Baru';
+        $metode_label = ($metode_pembayaran === 'qris') ? '📲 QRIS (Scan QR Code)' : '💵 TUNAI / CASH';
+
         $wa_text = "Halo Salam Water, saya mau konfirmasi pesanan:\n"
             . "No Pesanan: *{$nomor_pesanan}*\n"
             . "Nama: *{$nama}*\n"
+            . "No HP/WA: {$no_hp}\n"
             . "Layanan: *{$layanan_label}*\n"
             . "Pesanan: {$jumlah_galon}x {$jenis_label} (@ Rp " . number_format($harga_satuan, 0, ',', '.') . ")\n"
-            . "Total: Rp " . number_format($total, 0, ',', '.') . "\n"
-            . ((float)$harga_satuan == 5000.00 ? "Info Ambil: {$alamat}\n" : "Alamat Antar: {$alamat}\n")
-            . "Metode Bayar: " . strtoupper($metode_pembayaran) . " (CASH)";
+            . "Total: *Rp " . number_format($total, 0, ',', '.') . "*\n"
+            . "Metode Bayar: *{$metode_label}*\n"
+            . ((float)$harga_satuan == 5000.00 ? "Info Ambil: {$alamat}\n" : "Alamat Antar: {$alamat}\n");
+
+        if (!empty($maps_url)) {
+            $wa_text .= "Titik Google Maps: {$maps_url}\n";
+        }
+
+        if ($metode_pembayaran === 'qris') {
+            $wa_text .= "\n*Catatan QRIS:* Saya sudah scan QRIS Depot. Bukti screenshot pembayaran saya lampirkan di chat ini.";
+        }
 
         $wa_url_1 = "https://wa.me/6287879996392?text=" . rawurlencode($wa_text);
         $wa_url_2 = "https://wa.me/6285659719922?text=" . rawurlencode($wa_text);
@@ -137,6 +154,9 @@ function handle_create_pesanan($pdo)
             'nama'          => $nama,
             'no_hp'         => $no_hp,
             'alamat'        => $alamat,
+            'maps_url'      => $maps_url,
+            'latitude'      => $latitude,
+            'longitude'     => $longitude,
             'jenis_galon'   => $jenis_galon,
             'jumlah_galon'  => $jumlah_galon,
             'harga_satuan'  => $harga_satuan,
@@ -169,7 +189,7 @@ function handle_get_pesanan($pdo)
             $params[':status'] = $_GET['status'];
         }
 
-        $sql = "SELECT id, nomor_pesanan, tanggal, nama_pelanggan, no_hp, alamat, 
+        $sql = "SELECT id, nomor_pesanan, tanggal, nama_pelanggan, no_hp, alamat, maps_url, latitude, longitude,
                        jenis_galon, harga_satuan, jumlah_galon, total, 
                        metode_pembayaran, status, catatan, id_transaksi_penjualan, created_at
                 FROM pesanan";
@@ -189,10 +209,11 @@ function handle_get_pesanan($pdo)
         $stmt->execute($params);
         $orders = $stmt->fetchAll();
 
-        // Hitung statistik pesanan menunggu
+        // Hitung statistik pesanan menunggu & QRIS pending
         $count_stmt = $pdo->query("SELECT 
             COUNT(id) AS total_order,
             SUM(CASE WHEN status = 'menunggu' THEN 1 ELSE 0 END) AS pending_count,
+            SUM(CASE WHEN status = 'menunggu' AND metode_pembayaran = 'qris' THEN 1 ELSE 0 END) AS qris_pending_count,
             SUM(CASE WHEN status = 'diproses' THEN 1 ELSE 0 END) AS proses_count,
             SUM(CASE WHEN status = 'selesai' THEN 1 ELSE 0 END) AS selesai_count
         FROM pesanan");
