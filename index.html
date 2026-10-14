@@ -7,9 +7,13 @@
     <title>Salam Water - Laporan Keuangan & Pemesanan Depot Air Minum</title>
     <meta name="description"
         content="Aplikasi web pemesanan galon online dan manajemen laporan keuangan depot air minum isi ulang Salam Water">
+    <!-- Favicon & Touch Icons Asli -->
+    <link rel="icon" type="image/x-icon" href="assets/favicon.ico">
+    <link rel="icon" type="image/png" sizes="32x32" href="assets/favicon-32x32.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="assets/favicon-16x16.png">
     <link rel="icon" type="image/svg+xml" href="assets/favicon.svg">
-    <link rel="apple-touch-icon" href="assets/favicon.svg">
-    <link rel="stylesheet" href="assets/style.css?v=3.3">
+    <link rel="apple-touch-icon" sizes="180x180" href="assets/apple-touch-icon.png">
+    <link rel="stylesheet" href="assets/style.css?v=4.2">
     <style>
         /* ==========================================================
            CRITICAL ROLE & LAYOUT CONTROL (ZERO LEAKAGE / INSTANT SAFE)
@@ -89,13 +93,14 @@
         <div class="container">
             <div class="header-inner">
                 <div class="brand-group">
-                    <div class="brand-icon">
-                        <img src="assets/favicon.svg" alt="Salam Water Logo" width="28" height="28"
-                            style="display: block;">
+                    <div class="brand-icon"
+                        style="background: #ffffff; border-radius: 50%; padding: 2px; box-shadow: 0 2px 6px rgba(0,0,0,0.18); width: 44px; height: 44px; display: flex; align-items: center; justify-content: center; overflow: hidden; flex-shrink: 0;">
+                        <img src="assets/logo-round.png" alt="Salam Water Logo" width="40" height="40"
+                            style="display: block; object-fit: contain; border-radius: 50%;">
                     </div>
                     <div>
-                        <h1 class="brand-title">SALAM WATER</h1>
-                        <p class="brand-subtitle">Depot Air Minum Isi Ulang & Pesan Antar</p>
+                        <h1 class="brand-title" style="letter-spacing: -0.01em;">SALAM WATER</h1>
+                        <p class="brand-subtitle">Dari Mata Air Pegunungan • Halal & Higienis</p>
                     </div>
                 </div>
                 <div class="header-meta">
@@ -165,12 +170,22 @@
                  TAB 1: FORMULIR PEMESANAN GALON (UNTUK PELANGGAN TANPA LOGIN)
                  ========================================================== -->
             <section id="pane-pesan" class="tab-pane active guest-only">
-                <div class="hero-order" style="text-align: center; margin-bottom: 1.5rem;">
+                <div class="hero-order" style="text-align: center; margin-bottom: 1.5rem; padding: 2rem 1.5rem;">
+                    <!-- Logo Bulat Original Salam Water -->
+                    <div style="display: flex; justify-content: center; margin-bottom: 0.9rem;">
+                        <div
+                            style="width: 110px; height: 110px; border-radius: 50%; background: #ffffff; padding: 5px; box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.35), 0 0 0 5px rgba(255, 255, 255, 0.35); display: flex; align-items: center; justify-content: center; overflow: hidden;">
+                            <img src="assets/logo-round.png" alt="Salam Water Logo"
+                                style="width: 100%; height: 100%; object-fit: contain; border-radius: 50%; display: block;">
+                        </div>
+                    </div>
                     <h2 class="hero-title"
-                        style="font-size: 1.6rem; font-weight: 800; color: var(--text-main); margin-bottom: 0.35rem;">
+                        style="font-size: 1.65rem; font-weight: 800; color: #ffffff; margin-bottom: 0.35rem; text-shadow: 0 2px 4px rgba(0,0,0,0.2);">
                         Air Minum Higienis, Segar & Praktis</h2>
-                    <p class="hero-desc" style="color: var(--text-muted); font-size: 0.95rem;">Pesan air minum isi ulang
-                        dengan mudah & cepat tanpa harus login!</p>
+                    <p class="hero-desc"
+                        style="color: rgba(255, 255, 255, 0.92); font-size: 0.95rem; margin-bottom: 0;">
+                        Depot Salam Water • Dari Mata Air Pegunungan • Pesan Antar Tanpa Harus Login!
+                    </p>
                 </div>
 
                 <div class="grid-2col"
@@ -205,7 +220,8 @@
                                     <!-- Pilihan Layanan & Tarif Satuan (Hanya Isi Ulang 5rb & 6rb) -->
                                     <div class="form-group col-span-2">
                                         <label class="form-label">Pilih Layanan & Tarif Satuan *</label>
-                                        <div class="product-radio-grid" style="grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));">
+                                        <div class="product-radio-grid"
+                                            style="grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));">
                                             <div class="product-radio-card active" data-jenis="isi_ulang"
                                                 data-harga="5000">
                                                 <div class="product-radio-title">💧 Isi Ulang (Ambil di Depot)</div>
@@ -238,24 +254,37 @@
                                     </div>
 
                                     <!-- Integrasi Titik Google Maps (Akurasi Pengantaran) -->
-                                    <div class="form-group col-span-2" id="group-order-maps" style="background: #f8fafc; border: 1px dashed #cbd5e1; border-radius: var(--radius-md); padding: 0.85rem;">
-                                        <label class="form-label" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.35rem; flex-wrap: wrap; gap: 0.4rem;">
-                                            <span>📍 Titik Lokasi Google Maps <small style="color:var(--text-muted); font-weight:400;">(Agar kurir tepat sampai ke rumah)</small></span>
-                                            <button type="button" id="btn-detect-gps" class="btn btn-xs btn-secondary" style="font-size: 0.75rem; background:#ffffff; border:1px solid #cbd5e1; color:#0284c7; font-weight:700;">
+                                    <div class="form-group col-span-2" id="group-order-maps"
+                                        style="background: #f8fafc; border: 1px dashed #cbd5e1; border-radius: var(--radius-md); padding: 0.85rem;">
+                                        <label class="form-label"
+                                            style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.35rem; flex-wrap: wrap; gap: 0.4rem;">
+                                            <span>📍 Titik Lokasi Google Maps <small
+                                                    style="color:var(--text-muted); font-weight:400;">(Agar kurir tepat
+                                                    sampai ke rumah)</small></span>
+                                            <button type="button" id="btn-detect-gps" class="btn btn-xs btn-secondary"
+                                                style="font-size: 0.75rem; background:#ffffff; border:1px solid #cbd5e1; color:#0284c7; font-weight:700;">
                                                 🎯 Ambil Titik GPS Saya
                                             </button>
                                         </label>
                                         <div style="display: flex; gap: 0.4rem; align-items: center;">
-                                            <input type="text" id="order-maps-url" class="form-control" placeholder="Contoh: https://maps.app.goo.gl/... atau klik tombol GPS di atas">
-                                            <a id="btn-preview-maps" href="#" target="_blank" class="btn btn-xs btn-maps" style="display: none; white-space: nowrap; padding: 0.5rem 0.75rem; text-decoration:none;" title="Cek Titik di Google Maps">
+                                            <input type="text" id="order-maps-url" class="form-control"
+                                                placeholder="Contoh: https://maps.app.goo.gl/... atau klik tombol GPS di atas">
+                                            <a id="btn-preview-maps" href="#" target="_blank"
+                                                class="btn btn-xs btn-maps"
+                                                style="display: none; white-space: nowrap; padding: 0.5rem 0.75rem; text-decoration:none;"
+                                                title="Cek Titik di Google Maps">
                                                 🗺️ Cek Titik
                                             </a>
                                         </div>
                                         <input type="hidden" id="order-latitude">
                                         <input type="hidden" id="order-longitude">
-                                        <div id="gps-status-indicator" style="display:none; font-size: 0.78rem; margin-top: 0.35rem; color: #16a34a; font-weight: 600;"></div>
-                                        <small style="color: var(--text-muted); font-size: 0.74rem; display: block; margin-top: 3px;">
-                                            💡 Klik <strong>Ambil Titik GPS Saya</strong> saat berada di rumah, atau paste link Google Maps rumah Anda agar kurir tidak perlu tanya-tanya jalan.
+                                        <div id="gps-status-indicator"
+                                            style="display:none; font-size: 0.78rem; margin-top: 0.35rem; color: #16a34a; font-weight: 600;">
+                                        </div>
+                                        <small
+                                            style="color: var(--text-muted); font-size: 0.74rem; display: block; margin-top: 3px;">
+                                            💡 Klik <strong>Ambil Titik GPS Saya</strong> saat berada di rumah, atau
+                                            paste link Google Maps rumah Anda agar kurir tidak perlu tanya-tanya jalan.
                                         </small>
                                     </div>
 
@@ -288,46 +317,69 @@
                                     </div>
 
                                     <!-- Box Preview QRIS (Muncul saat memilih QRIS) -->
-                                    <div class="form-group col-span-2" id="box-qris-customer-preview" style="display: none; background: #eff6ff; border: 2px dashed #3b82f6; border-radius: 12px; padding: 1.25rem 1rem; text-align: center; margin-top: 0.3rem;">
-                                        <div style="font-weight: 800; color: #1e40af; font-size: 1.1rem; margin-bottom: 0.25rem;">
+                                    <div class="form-group col-span-2" id="box-qris-customer-preview"
+                                        style="display: none; background: #eff6ff; border: 2px dashed #3b82f6; border-radius: 12px; padding: 1.25rem 1rem; text-align: center; margin-top: 0.3rem;">
+                                        <div
+                                            style="font-weight: 800; color: #1e40af; font-size: 1.1rem; margin-bottom: 0.25rem;">
                                             📲 Scan QRIS Depot Salam Water
                                         </div>
                                         <p style="color: #1e3a8a; font-size: 0.85rem; margin-bottom: 0.75rem;">
-                                            Buka BCA, Mandiri, BRI, BNI, GoPay, OVO, DANA, ShopeePay, atau m-Banking Anda, lalu scan QR di bawah ini:
+                                            Buka BCA, Mandiri, BRI, BNI, GoPay, OVO, DANA, ShopeePay, atau m-Banking
+                                            Anda, lalu scan QR di bawah ini:
                                         </p>
 
                                         <!-- Pilihan Mode Tampilan QR -->
-                                        <div style="display: flex; justify-content: center; gap: 0.35rem; margin-bottom: 0.75rem; flex-wrap: wrap;">
-                                            <button type="button" class="btn-xs btn-qris-mode active" data-target="customer" data-src="assets/qris-card.png" style="background:#2563eb; color:#ffffff; border-radius:20px; padding:0.3rem 0.75rem; font-weight:700; border:none; cursor:pointer;">
+                                        <div
+                                            style="display: flex; justify-content: center; gap: 0.35rem; margin-bottom: 0.75rem; flex-wrap: wrap;">
+                                            <button type="button" class="btn-xs btn-qris-mode active"
+                                                data-target="customer" data-src="assets/qris-card.png"
+                                                style="background:#2563eb; color:#ffffff; border-radius:20px; padding:0.3rem 0.75rem; font-weight:700; border:none; cursor:pointer;">
                                                 🎯 Standar Toko
                                             </button>
-                                            <button type="button" class="btn-xs btn-qris-mode" data-target="customer" data-src="assets/qris-clean.png" style="background:#ffffff; color:#1e40af; border:1px solid #bfdbfe; border-radius:20px; padding:0.3rem 0.75rem; font-weight:700; cursor:pointer;">
+                                            <button type="button" class="btn-xs btn-qris-mode" data-target="customer"
+                                                data-src="assets/qris-clean.png"
+                                                style="background:#ffffff; color:#1e40af; border:1px solid #bfdbfe; border-radius:20px; padding:0.3rem 0.75rem; font-weight:700; cursor:pointer;">
                                                 🔲 QR Saja (Super Besar)
                                             </button>
-                                            <button type="button" class="btn-xs btn-qris-mode" data-target="customer" data-src="assets/qris-salam-water.jpg" style="background:#ffffff; color:#1e40af; border:1px solid #bfdbfe; border-radius:20px; padding:0.3rem 0.75rem; font-weight:700; cursor:pointer;">
+                                            <button type="button" class="btn-xs btn-qris-mode" data-target="customer"
+                                                data-src="assets/qris-salam-water.jpg"
+                                                style="background:#ffffff; color:#1e40af; border:1px solid #bfdbfe; border-radius:20px; padding:0.3rem 0.75rem; font-weight:700; cursor:pointer;">
                                                 📜 Poster Asli
                                             </button>
                                         </div>
 
                                         <!-- Kotak Gambar QRIS Berukuran Besar & Jelas -->
-                                        <div style="background: #ffffff; display: inline-block; padding: 0.75rem; border-radius: 12px; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1); margin-bottom: 0.65rem; border: 1px solid #bfdbfe;">
-                                            <img id="customer-qris-img" src="assets/qris-card.png" alt="QRIS Salam Water" style="max-width: 320px; width: 100%; height: auto; display: block; border-radius: 6px; margin: 0 auto;">
+                                        <div
+                                            style="background: #ffffff; display: inline-block; padding: 0.75rem; border-radius: 12px; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1); margin-bottom: 0.65rem; border: 1px solid #bfdbfe;">
+                                            <img id="customer-qris-img" src="assets/qris-card.png"
+                                                alt="QRIS Salam Water"
+                                                style="max-width: 320px; width: 100%; height: auto; display: block; border-radius: 6px; margin: 0 auto;">
                                         </div>
 
-                                        <div style="display: flex; justify-content: center; gap: 0.5rem; margin-bottom: 0.75rem; flex-wrap: wrap;">
-                                            <button type="button" class="btn btn-xs btn-primary" onclick="App.showQrisModal(App.state.orderProduct ? App.state.orderProduct.harga * (parseInt(document.getElementById('order-jumlah').value, 10) || 1) : 5000, 'Pesanan Online')" style="font-size:0.78rem; font-weight:700;">
+                                        <div
+                                            style="display: flex; justify-content: center; gap: 0.5rem; margin-bottom: 0.75rem; flex-wrap: wrap;">
+                                            <button type="button" class="btn btn-xs btn-primary"
+                                                onclick="App.showQrisModal(App.state.orderProduct ? App.state.orderProduct.harga * (parseInt(document.getElementById('order-jumlah').value, 10) || 1) : 5000, 'Pesanan Online')"
+                                                style="font-size:0.78rem; font-weight:700;">
                                                 🔍 Perbesar Layar Penuh
                                             </button>
-                                            <a id="customer-qris-open-link" href="assets/qris-card.png" target="_blank" download="QRIS-Salam-Water.png" class="btn btn-xs btn-secondary" style="font-size:0.78rem; text-decoration:none; display:inline-flex; align-items:center;">
+                                            <a id="customer-qris-open-link" href="assets/qris-card.png" target="_blank"
+                                                download="QRIS-Salam-Water.png" class="btn btn-xs btn-secondary"
+                                                style="font-size:0.78rem; text-decoration:none; display:inline-flex; align-items:center;">
                                                 ⬇️ Simpan / Buka Gambar
                                             </a>
                                         </div>
 
-                                        <div style="background:#dbeafe; border-radius:8px; padding:0.55rem; font-size:0.9rem; color:#1e40af; margin-top:0.4rem; font-weight:700;">
-                                            Nominal Pembayaran: <span id="qris-nominal-display" style="font-size:1.2rem; font-weight:800; color:#2563eb;">Rp 5.000</span>
+                                        <div
+                                            style="background:#dbeafe; border-radius:8px; padding:0.55rem; font-size:0.9rem; color:#1e40af; margin-top:0.4rem; font-weight:700;">
+                                            Nominal Pembayaran: <span id="qris-nominal-display"
+                                                style="font-size:1.2rem; font-weight:800; color:#2563eb;">Rp
+                                                5.000</span>
                                         </div>
-                                        <p style="font-size: 0.78rem; color: #475569; margin-top: 0.5rem; line-height: 1.4;">
-                                            📸 <em>Setelah scan & pembayaran berhasil, simpan screenshot bukti pembayaran untuk dikirim via WhatsApp agar pesanan segera diantar.</em>
+                                        <p
+                                            style="font-size: 0.78rem; color: #475569; margin-top: 0.5rem; line-height: 1.4;">
+                                            📸 <em>Setelah scan & pembayaran berhasil, simpan screenshot bukti
+                                                pembayaran untuk dikirim via WhatsApp agar pesanan segera diantar.</em>
                                         </p>
                                     </div>
 
@@ -446,8 +498,14 @@
             <section id="pane-login" class="tab-pane guest-only" style="display: none;">
                 <div class="login-card-container" style="padding: 2.5rem 0;">
                     <div class="login-card">
-                        <div class="login-card-header">
-                            <div class="login-card-icon">🔐</div>
+                        <div class="login-card-header" style="text-align: center; padding-top: 1.75rem;">
+                            <div style="display: flex; justify-content: center; margin-bottom: 0.85rem;">
+                                <div
+                                    style="width: 80px; height: 80px; border-radius: 50%; background: #ffffff; padding: 3px; box-shadow: 0 4px 15px rgba(0,0,0,0.1), 0 0 0 3px #e0f2fe; display: flex; align-items: center; justify-content: center; overflow: hidden;">
+                                    <img src="assets/logo-round.png" alt="Salam Water"
+                                        style="width: 100%; height: 100%; object-fit: contain; border-radius: 50%; display: block;">
+                                </div>
+                            </div>
                             <h2 class="login-card-title">Login Pengelola Depot</h2>
                             <p class="login-card-subtitle">Masuk untuk mengelola pesanan, kasir, pengeluaran & keuangan
                             </p>
@@ -506,18 +564,24 @@
                 </div>
 
                 <!-- Notifikasi Pesanan QRIS Baru (Masuk Otomatis) -->
-                <div id="banner-qris-alert" style="display: none; background: #eef2ff; border: 1px solid #818cf8; border-left: 5px solid #4f46e5; border-radius: var(--radius-md); padding: 0.85rem 1.15rem; margin-bottom: 1.25rem;">
-                    <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.6rem;">
+                <div id="banner-qris-alert"
+                    style="display: none; background: #eef2ff; border: 1px solid #818cf8; border-left: 5px solid #4f46e5; border-radius: var(--radius-md); padding: 0.85rem 1.15rem; margin-bottom: 1.25rem;">
+                    <div
+                        style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.6rem;">
                         <div style="display: flex; align-items: center; gap: 0.75rem;">
                             <span style="font-size: 1.5rem;">🔔</span>
                             <div>
-                                <strong style="color: #312e81; font-size: 0.95rem;">Notifikasi Pesanan QRIS Masuk!</strong>
+                                <strong style="color: #312e81; font-size: 0.95rem;">Notifikasi Pesanan QRIS
+                                    Masuk!</strong>
                                 <div style="color: #4338ca; font-size: 0.83rem;">
-                                    Ada <span id="qris-pending-count-badge" style="font-weight: 800; text-decoration: underline;">0</span> pesanan dengan pembayaran non-tunai (QRIS) yang menunggu verifikasi bukti transfer.
+                                    Ada <span id="qris-pending-count-badge"
+                                        style="font-weight: 800; text-decoration: underline;">0</span> pesanan dengan
+                                    pembayaran non-tunai (QRIS) yang menunggu verifikasi bukti transfer.
                                 </div>
                             </div>
                         </div>
-                        <button type="button" class="btn btn-xs btn-primary" onclick="App.filterQrisOrders()" style="background:#4f46e5; border-color:#4338ca;">
+                        <button type="button" class="btn btn-xs btn-primary" onclick="App.filterQrisOrders()"
+                            style="background:#4f46e5; border-color:#4338ca;">
                             📲 Tampilkan Pesanan QRIS
                         </button>
                     </div>
@@ -530,7 +594,8 @@
                     <button type="button" class="period-pill" data-status="diproses">⚙️ Sedang Diproses</button>
                     <button type="button" class="period-pill" data-status="selesai">🟢 Selesai</button>
                     <button type="button" class="period-pill" data-status="dibatalkan">🔴 Dibatalkan</button>
-                    <button type="button" class="period-pill" data-status="qris" style="background:#e0e7ff; color:#3730a3; font-weight:700;">📲 Bayar QRIS</button>
+                    <button type="button" class="period-pill" data-status="qris"
+                        style="background:#e0e7ff; color:#3730a3; font-weight:700;">📲 Bayar QRIS</button>
                 </div>
 
                 <div class="card">
@@ -567,7 +632,8 @@
                 <div class="section-header">
                     <div>
                         <h2 class="section-title">🪣 Sistem Peminjaman Galon Pelanggan</h2>
-                        <p class="section-desc">Pencatatan dan pelacakan galon depot yang dipinjam pelanggan agar terkontrol, akurat, dan tidak hilang.</p>
+                        <p class="section-desc">Pencatatan dan pelacakan galon depot yang dipinjam pelanggan agar
+                            terkontrol, akurat, dan tidak hilang.</p>
                     </div>
                     <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
                         <button type="button" id="btn-toggle-pinjam-form" class="btn btn-sm btn-primary">
@@ -584,7 +650,8 @@
                     <div class="stat-card card-purple">
                         <div class="stat-header">
                             <span class="stat-label">Galon Sedang Dipinjam</span>
-                            <div class="stat-icon" style="background: var(--purple-light); color: var(--purple);">🪣</div>
+                            <div class="stat-icon" style="background: var(--purple-light); color: var(--purple);">🪣
+                            </div>
                         </div>
                         <div class="stat-value" id="pinjam-stat-total-galon">0 Galon</div>
                         <div class="stat-footer">
@@ -595,7 +662,8 @@
                     <div class="stat-card">
                         <div class="stat-header">
                             <span class="stat-label">Orang Meminjam</span>
-                            <div class="stat-icon" style="background: var(--primary-light); color: var(--primary-dark);">👥</div>
+                            <div class="stat-icon"
+                                style="background: var(--primary-light); color: var(--primary-dark);">👥</div>
                         </div>
                         <div class="stat-value" id="pinjam-stat-total-peminjam">0 Orang</div>
                         <div class="stat-footer">
@@ -617,7 +685,8 @@
                     <div class="stat-card card-success">
                         <div class="stat-header">
                             <span class="stat-label">Galon Sudah Dikembalikan</span>
-                            <div class="stat-icon" style="background: var(--success-light); color: var(--success-dark);">✅</div>
+                            <div class="stat-icon"
+                                style="background: var(--success-light); color: var(--success-dark);">✅</div>
                         </div>
                         <div class="stat-value" id="pinjam-stat-total-kembali">0 Galon</div>
                         <div class="stat-footer">
@@ -627,10 +696,14 @@
                 </div>
 
                 <!-- Form Input Pinjam Galon Baru (Collapsible) -->
-                <div id="box-pinjam-form" class="card" style="display: none; margin-bottom: 1.75rem; border: 2px solid var(--primary); box-shadow: 0 10px 15px -3px rgba(2, 132, 199, 0.15);">
-                    <div class="card-header" style="background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%); color: #ffffff; display: flex; justify-content: space-between; align-items: center;">
-                        <h3 class="card-title" style="color: #ffffff; font-size: 1.05rem; font-weight: 700;">📝 Formulir Peminjaman Galon Baru</h3>
-                        <button type="button" id="btn-close-pinjam-form" class="btn-close-modal" style="color: #ffffff; font-size: 1.3rem;">✕</button>
+                <div id="box-pinjam-form" class="card"
+                    style="display: none; margin-bottom: 1.75rem; border: 2px solid var(--primary); box-shadow: 0 10px 15px -3px rgba(2, 132, 199, 0.15);">
+                    <div class="card-header"
+                        style="background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%); color: #ffffff; display: flex; justify-content: space-between; align-items: center;">
+                        <h3 class="card-title" style="color: #ffffff; font-size: 1.05rem; font-weight: 700;">📝 Formulir
+                            Peminjaman Galon Baru</h3>
+                        <button type="button" id="btn-close-pinjam-form" class="btn-close-modal"
+                            style="color: #ffffff; font-size: 1.3rem;">✕</button>
                     </div>
                     <div class="card-body">
                         <form id="form-pinjam-galon">
@@ -642,61 +715,85 @@
 
                                 <div class="form-group">
                                     <label class="form-label" for="pinjam-nama">Nama Peminjam *</label>
-                                    <input type="text" id="pinjam-nama" class="form-control" placeholder="Contoh: Pak Joko / Bu Rini (RT 02)" required>
+                                    <input type="text" id="pinjam-nama" class="form-control"
+                                        placeholder="Contoh: Pak Joko / Bu Rini (RT 02)" required>
                                 </div>
 
                                 <div class="form-group">
                                     <label class="form-label" for="pinjam-nohp">Nomor WhatsApp / HP *</label>
-                                    <input type="tel" id="pinjam-nohp" class="form-control" placeholder="Contoh: 081234567890" required>
+                                    <input type="tel" id="pinjam-nohp" class="form-control"
+                                        placeholder="Contoh: 081234567890" required>
                                 </div>
 
                                 <div class="form-group">
                                     <label class="form-label" for="pinjam-jumlah">Jumlah Galon yang Dipinjam *</label>
-                                    <input type="number" id="pinjam-jumlah" class="form-control" min="1" value="1" required>
+                                    <input type="number" id="pinjam-jumlah" class="form-control" min="1" value="1"
+                                        required>
                                     <div class="preset-group">
-                                        <button type="button" class="btn-preset btn-preset-pinjam-qty" data-qty="1">1 Galon</button>
-                                        <button type="button" class="btn-preset btn-preset-pinjam-qty" data-qty="2">2 Galon</button>
-                                        <button type="button" class="btn-preset btn-preset-pinjam-qty" data-qty="3">3 Galon</button>
-                                        <button type="button" class="btn-preset btn-preset-pinjam-qty" data-qty="5">5 Galon</button>
-                                        <button type="button" class="btn-preset btn-preset-pinjam-qty" data-qty="10">10 Galon</button>
+                                        <button type="button" class="btn-preset btn-preset-pinjam-qty" data-qty="1">1
+                                            Galon</button>
+                                        <button type="button" class="btn-preset btn-preset-pinjam-qty" data-qty="2">2
+                                            Galon</button>
+                                        <button type="button" class="btn-preset btn-preset-pinjam-qty" data-qty="3">3
+                                            Galon</button>
+                                        <button type="button" class="btn-preset btn-preset-pinjam-qty" data-qty="5">5
+                                            Galon</button>
+                                        <button type="button" class="btn-preset btn-preset-pinjam-qty" data-qty="10">10
+                                            Galon</button>
                                     </div>
                                 </div>
 
                                 <div class="form-group col-span-2">
                                     <label class="form-label" for="pinjam-alamat">Alamat Lengkap Peminjam *</label>
-                                    <textarea id="pinjam-alamat" class="form-control" rows="2" placeholder="Contoh: Jl. Mawar No. 12 RT 03/05 (Dekat Pos Ronda)" required></textarea>
+                                    <textarea id="pinjam-alamat" class="form-control" rows="2"
+                                        placeholder="Contoh: Jl. Mawar No. 12 RT 03/05 (Dekat Pos Ronda)"
+                                        required></textarea>
                                 </div>
 
-                                <div class="form-group col-span-2" style="background: #f8fafc; border: 1px dashed #cbd5e1; border-radius: var(--radius-md); padding: 0.85rem;">
-                                    <label class="form-label" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.35rem; flex-wrap: wrap;">
-                                        <span>📍 Titik Google Maps Peminjam <small style="color:var(--text-muted); font-weight:400;">(Opsional, memudahkan penjemputan galon)</small></span>
-                                        <button type="button" id="btn-pinjam-gps" class="btn btn-xs btn-secondary" style="font-size: 0.75rem; background:#ffffff; border:1px solid #cbd5e1; color:#0284c7; font-weight:700;">
+                                <div class="form-group col-span-2"
+                                    style="background: #f8fafc; border: 1px dashed #cbd5e1; border-radius: var(--radius-md); padding: 0.85rem;">
+                                    <label class="form-label"
+                                        style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.35rem; flex-wrap: wrap;">
+                                        <span>📍 Titik Google Maps Peminjam <small
+                                                style="color:var(--text-muted); font-weight:400;">(Opsional, memudahkan
+                                                penjemputan galon)</small></span>
+                                        <button type="button" id="btn-pinjam-gps" class="btn btn-xs btn-secondary"
+                                            style="font-size: 0.75rem; background:#ffffff; border:1px solid #cbd5e1; color:#0284c7; font-weight:700;">
                                             🎯 Ambil Titik GPS Saya
                                         </button>
                                     </label>
-                                    <input type="text" id="pinjam-maps-url" class="form-control" placeholder="Paste link Google Maps / shareloc peminjam di sini">
+                                    <input type="text" id="pinjam-maps-url" class="form-control"
+                                        placeholder="Paste link Google Maps / shareloc peminjam di sini">
                                 </div>
 
                                 <div class="form-group">
                                     <label class="form-label" for="pinjam-jaminan">Uang Jaminan / Titipan (Rp)</label>
-                                    <input type="number" id="pinjam-jaminan" class="form-control" min="0" step="5000" value="0">
+                                    <input type="number" id="pinjam-jaminan" class="form-control" min="0" step="5000"
+                                        value="0">
                                     <div class="preset-group">
-                                        <button type="button" class="btn-preset btn-preset-jaminan" data-val="0">Rp 0 (Tanpa Jaminan)</button>
-                                        <button type="button" class="btn-preset btn-preset-jaminan" data-val="20000">Rp 20.000</button>
-                                        <button type="button" class="btn-preset btn-preset-jaminan" data-val="30000">Rp 30.000</button>
-                                        <button type="button" class="btn-preset btn-preset-jaminan" data-val="50000">Rp 50.000</button>
+                                        <button type="button" class="btn-preset btn-preset-jaminan" data-val="0">Rp 0
+                                            (Tanpa Jaminan)</button>
+                                        <button type="button" class="btn-preset btn-preset-jaminan" data-val="20000">Rp
+                                            20.000</button>
+                                        <button type="button" class="btn-preset btn-preset-jaminan" data-val="30000">Rp
+                                            30.000</button>
+                                        <button type="button" class="btn-preset btn-preset-jaminan" data-val="50000">Rp
+                                            50.000</button>
                                     </div>
-                                    <small style="color: var(--text-muted); font-size: 0.75rem;">Uang jaminan disimpan sementara dan dikembalikan saat galon kembali.</small>
+                                    <small style="color: var(--text-muted); font-size: 0.75rem;">Uang jaminan disimpan
+                                        sementara dan dikembalikan saat galon kembali.</small>
                                 </div>
 
                                 <div class="form-group">
                                     <label class="form-label" for="pinjam-catatan">Keterangan / Merk Galon</label>
-                                    <input type="text" id="pinjam-catatan" class="form-control" placeholder="Contoh: Galon merk Aqua / Dipinjam untuk hajatan 3 hari">
+                                    <input type="text" id="pinjam-catatan" class="form-control"
+                                        placeholder="Contoh: Galon merk Aqua / Dipinjam untuk hajatan 3 hari">
                                 </div>
                             </div>
 
                             <div style="margin-top: 1.25rem; display: flex; gap: 0.6rem;">
-                                <button type="submit" id="btn-submit-pinjam" class="btn btn-primary" style="font-weight: 700;">
+                                <button type="submit" id="btn-submit-pinjam" class="btn btn-primary"
+                                    style="font-weight: 700;">
                                     💾 Simpan Data Peminjaman
                                 </button>
                                 <button type="button" id="btn-cancel-pinjam" class="btn btn-secondary">
@@ -710,17 +807,22 @@
                 <!-- Kontrol Filter & Pencarian Pinjam Galon -->
                 <div class="card" style="margin-bottom: 1.25rem;">
                     <div class="card-body" style="padding: 1rem;">
-                        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.85rem;">
+                        <div
+                            style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.85rem;">
                             <!-- Filter Status -->
                             <div class="period-pills" id="pinjam-status-filters" style="margin-bottom: 0;">
                                 <button type="button" class="period-pill active" data-status="">Semua Data</button>
-                                <button type="button" class="period-pill" data-status="dipinjam">🟡 Sedang Dipinjam</button>
-                                <button type="button" class="period-pill" data-status="dikembalikan">🟢 Sudah Dikembalikan</button>
+                                <button type="button" class="period-pill" data-status="dipinjam">🟡 Sedang
+                                    Dipinjam</button>
+                                <button type="button" class="period-pill" data-status="dikembalikan">🟢 Sudah
+                                    Dikembalikan</button>
                             </div>
 
                             <!-- Search Input -->
                             <div style="flex-grow: 1; max-width: 360px; min-width: 240px;">
-                                <input type="text" id="pinjam-search-input" class="form-control" placeholder="🔍 Cari peminjam, no HP, alamat..." style="padding: 0.45rem 0.85rem; font-size: 0.85rem;">
+                                <input type="text" id="pinjam-search-input" class="form-control"
+                                    placeholder="🔍 Cari peminjam, no HP, alamat..."
+                                    style="padding: 0.45rem 0.85rem; font-size: 0.85rem;">
                             </div>
                         </div>
                     </div>
@@ -744,7 +846,8 @@
                             </thead>
                             <tbody id="tbody-pinjam-galon">
                                 <tr>
-                                    <td colspan="8" style="text-align: center; padding: 2rem;">Memuat data peminjaman galon...</td>
+                                    <td colspan="8" style="text-align: center; padding: 2rem;">Memuat data peminjaman
+                                        galon...</td>
                                 </tr>
                             </tbody>
                         </table>
@@ -934,9 +1037,12 @@
                                 </div>
 
                                 <div class="form-group">
-                                    <label class="form-label" for="penjualan-metode" style="display:flex; justify-content:space-between; align-items:center;">
+                                    <label class="form-label" for="penjualan-metode"
+                                        style="display:flex; justify-content:space-between; align-items:center;">
                                         <span>Metode Pembayaran</span>
-                                        <button type="button" class="btn btn-xs btn-secondary" onclick="App.showQrisModal(parseFloat(document.getElementById('penjualan-jumlah').value || 1) * parseFloat(document.getElementById('penjualan-harga').value || 5000), 'Kasir Toko')" style="font-size:0.75rem; color:#4338ca; background:#e0e7ff; border:none;">
+                                        <button type="button" class="btn btn-xs btn-secondary"
+                                            onclick="App.showQrisModal(parseFloat(document.getElementById('penjualan-jumlah').value || 1) * parseFloat(document.getElementById('penjualan-harga').value || 5000), 'Kasir Toko')"
+                                            style="font-size:0.75rem; color:#4338ca; background:#e0e7ff; border:none;">
                                             📲 Tampilkan QRIS Toko
                                         </button>
                                     </label>
@@ -1081,13 +1187,21 @@
                  ========================================================== -->
             <section id="pane-laporan" class="tab-pane">
                 <!-- HEADER KHUSUS CETAK RESMI -->
-                <div class="print-only print-header">
-                    <h1>DEPOT AIR MINUM ISI ULANG "SALAM WATER"</h1>
-                    <p>Jl. SMP 5 No.23 Ciseureuh Purwakarta - Layanan Air Minum Higienis & Berkualitas</p>
-                    <p><strong>LAPORAN ARUS KAS & KEUANGAN OPERASIONAL</strong></p>
-                    <div class="print-meta-grid" style="margin-top: 10px;">
-                        <span>Periode: <strong id="print-periode-text">-</strong></span>
-                        <span>Dicetak Pada: <strong id="print-tgl-cetak">-</strong></span>
+                <div class="print-only print-header"
+                    style="display: flex; align-items: center; justify-content: center; gap: 1.25rem; margin-bottom: 1.25rem; border-bottom: 2px solid #000; padding-bottom: 0.75rem;">
+                    <img src="assets/logo-emblem.png" alt="Logo Salam Water"
+                        style="width: 70px; height: 70px; object-fit: contain;">
+                    <div style="text-align: left;">
+                        <h1 style="margin: 0; font-size: 1.35rem; letter-spacing: 0.5px;">DEPOT AIR MINUM ISI ULANG
+                            "SALAM WATER"</h1>
+                        <p style="margin: 3px 0; font-size: 0.88rem;">Jl. SMP 5 No.23 Ciseureuh Purwakarta - Dari Mata
+                            Air Pegunungan • Halal & Higienis</p>
+                        <p style="margin: 0; font-size: 0.92rem;"><strong>LAPORAN ARUS KAS & KEUANGAN
+                                OPERASIONAL</strong></p>
+                        <div class="print-meta-grid" style="margin-top: 6px;">
+                            <span>Periode: <strong id="print-periode-text">-</strong></span>
+                            <span>Dicetak Pada: <strong id="print-tgl-cetak">-</strong></span>
+                        </div>
                     </div>
                 </div>
 
@@ -1229,47 +1343,66 @@
     <div class="toast-container"></div>
 
     <!-- Modal Preview QRIS Toko (Admin / Kasir / Pelanggan) -->
-    <div id="modal-qris-viewer" class="modal-overlay" style="display: none; align-items: center; justify-content: center; z-index: 9999; padding: 1rem;">
-        <div class="modal-content" style="max-width: 500px; width: 95%; max-height: 92vh; overflow-y: auto; text-align: center; background: #ffffff; border-radius: 16px; overflow: hidden; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.35);">
-            <div class="modal-header" style="background: linear-gradient(135deg, #1e40af 0%, #3b82f6 100%); color: #ffffff; padding: 1rem 1.25rem;">
-                <h3 class="modal-title" style="color: #ffffff; font-size: 1.15rem; font-weight: 700;">📲 QRIS Pembayaran Toko</h3>
-                <button type="button" class="btn-close-modal" onclick="App.closeQrisModal()" style="color: #ffffff; font-size: 1.4rem;">✕</button>
+    <div id="modal-qris-viewer" class="modal-overlay"
+        style="display: none; align-items: center; justify-content: center; z-index: 9999; padding: 1rem;">
+        <div class="modal-content"
+            style="max-width: 500px; width: 95%; max-height: 92vh; overflow-y: auto; text-align: center; background: #ffffff; border-radius: 16px; overflow: hidden; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.35);">
+            <div class="modal-header"
+                style="background: linear-gradient(135deg, #1e40af 0%, #3b82f6 100%); color: #ffffff; padding: 1rem 1.25rem;">
+                <h3 class="modal-title" style="color: #ffffff; font-size: 1.15rem; font-weight: 700;">📲 QRIS Pembayaran
+                    Toko</h3>
+                <button type="button" class="btn-close-modal" onclick="App.closeQrisModal()"
+                    style="color: #ffffff; font-size: 1.4rem;">✕</button>
             </div>
             <div class="modal-body" style="padding: 1.25rem 1rem;">
                 <p style="color: var(--text-muted); font-size: 0.85rem; margin-bottom: 0.65rem;">
-                    Buka aplikasi m-Banking atau e-Wallet (BCA, Mandiri, BRI, BNI, GoPay, OVO, DANA, ShopeePay), lalu scan QR di bawah:
+                    Buka aplikasi m-Banking atau e-Wallet (BCA, Mandiri, BRI, BNI, GoPay, OVO, DANA, ShopeePay), lalu
+                    scan QR di bawah:
                 </p>
 
                 <!-- Pilihan Tampilan QR di Modal -->
-                <div style="display: flex; justify-content: center; gap: 0.35rem; margin-bottom: 0.85rem; flex-wrap: wrap;">
-                    <button type="button" class="btn-xs btn-qris-mode active" data-target="modal" data-src="assets/qris-card.png" style="background:#2563eb; color:#ffffff; border-radius:20px; padding:0.3rem 0.75rem; font-weight:700; border:none; cursor:pointer;">
+                <div
+                    style="display: flex; justify-content: center; gap: 0.35rem; margin-bottom: 0.85rem; flex-wrap: wrap;">
+                    <button type="button" class="btn-xs btn-qris-mode active" data-target="modal"
+                        data-src="assets/qris-card.png"
+                        style="background:#2563eb; color:#ffffff; border-radius:20px; padding:0.3rem 0.75rem; font-weight:700; border:none; cursor:pointer;">
                         🎯 Standar Toko
                     </button>
-                    <button type="button" class="btn-xs btn-qris-mode" data-target="modal" data-src="assets/qris-clean.png" style="background:#ffffff; color:#1e40af; border:1px solid #bfdbfe; border-radius:20px; padding:0.3rem 0.75rem; font-weight:700; cursor:pointer;">
+                    <button type="button" class="btn-xs btn-qris-mode" data-target="modal"
+                        data-src="assets/qris-clean.png"
+                        style="background:#ffffff; color:#1e40af; border:1px solid #bfdbfe; border-radius:20px; padding:0.3rem 0.75rem; font-weight:700; cursor:pointer;">
                         🔲 QR Saja (Ultra Besar)
                     </button>
-                    <button type="button" class="btn-xs btn-qris-mode" data-target="modal" data-src="assets/qris-salam-water.jpg" style="background:#ffffff; color:#1e40af; border:1px solid #bfdbfe; border-radius:20px; padding:0.3rem 0.75rem; font-weight:700; cursor:pointer;">
+                    <button type="button" class="btn-xs btn-qris-mode" data-target="modal"
+                        data-src="assets/qris-salam-water.jpg"
+                        style="background:#ffffff; color:#1e40af; border:1px solid #bfdbfe; border-radius:20px; padding:0.3rem 0.75rem; font-weight:700; cursor:pointer;">
                         📜 Poster Asli
                     </button>
                 </div>
 
-                <div style="background: #ffffff; padding: 0.85rem; border: 1px solid #bfdbfe; border-radius: 12px; display: inline-block; margin-bottom: 0.65rem; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.08);">
-                    <img id="modal-qris-img" src="assets/qris-card.png" alt="QRIS Toko Salam Water" style="max-width: 350px; width: 100%; height: auto; display: block; border-radius: 6px; margin: 0 auto;">
+                <div
+                    style="background: #ffffff; padding: 0.85rem; border: 1px solid #bfdbfe; border-radius: 12px; display: inline-block; margin-bottom: 0.65rem; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.08);">
+                    <img id="modal-qris-img" src="assets/qris-card.png" alt="QRIS Toko Salam Water"
+                        style="max-width: 350px; width: 100%; height: auto; display: block; border-radius: 6px; margin: 0 auto;">
                 </div>
 
                 <div style="display: flex; justify-content: center; gap: 0.5rem; margin-bottom: 0.65rem;">
-                    <a id="modal-qris-open-link" href="assets/qris-card.png" target="_blank" download="QRIS-Salam-Water.png" class="btn btn-xs btn-secondary" style="font-size:0.78rem; text-decoration:none; display:inline-flex; align-items:center;">
+                    <a id="modal-qris-open-link" href="assets/qris-card.png" target="_blank"
+                        download="QRIS-Salam-Water.png" class="btn btn-xs btn-secondary"
+                        style="font-size:0.78rem; text-decoration:none; display:inline-flex; align-items:center;">
                         ⬇️ Buka / Unduh Resolusi Asli
                     </a>
                 </div>
 
-                <div id="modal-qris-amount-box" style="margin-top: 0.5rem; background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 8px; padding: 0.75rem;">
+                <div id="modal-qris-amount-box"
+                    style="margin-top: 0.5rem; background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 8px; padding: 0.75rem;">
                     <div style="font-size: 0.82rem; color: #1e40af;">Total Tagihan Pembayaran:</div>
                     <div id="modal-qris-amount" style="font-size: 1.45rem; font-weight: 800; color: #2563eb;">Rp 0</div>
                     <div id="modal-qris-ref" style="font-size: 0.78rem; color: #64748b; margin-top: 2px;"></div>
                 </div>
 
-                <button type="button" class="btn btn-primary" onclick="App.closeQrisModal()" style="width: 100%; margin-top: 1rem; font-weight: 700;">
+                <button type="button" class="btn btn-primary" onclick="App.closeQrisModal()"
+                    style="width: 100%; margin-top: 1rem; font-weight: 700;">
                     Tutup Tampilan QRIS
                 </button>
             </div>
@@ -1277,7 +1410,7 @@
     </div>
 
     <!-- Script Controller JS -->
-    <script src="assets/app.js?v=4.0"></script>
+    <script src="assets/app.js?v=4.2"></script>
 </body>
 
 </html>
